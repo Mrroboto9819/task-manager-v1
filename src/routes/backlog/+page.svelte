@@ -1,0 +1,257 @@
+<script>
+  import { Plus, Pencil, Target, TrendingUp, Eye } from "lucide-svelte";
+  import { taskStore, sprintStore } from "../../lib/stores/index.js";
+  import TaskModal from "../../lib/components/TaskModal.svelte";
+  import TaskDetailModal from "../../lib/components/TaskDetailModal.svelte";
+  import { toastStore } from "../../lib/toastStore.svelte.js";
+  import { marked } from "marked";
+
+  let allTasks = $derived(taskStore.tasks);
+  let sprints = $derived(sprintStore.sprints);
+
+  // Modal state
+  let taskModalOpen = $state(false);
+  let taskModalMode = $state("create");
+  let selectedTask = $state(null);
+
+  // Detail modal state
+  let detailModalOpen = $state(false);
+  let detailTask = $state(null);
+
+  // Get backlog items (tasks without sprint)
+  let backlogItems = $derived(allTasks.filter((task) => !task.sprintId));
+
+  // Get active sprint
+  let activeSprint = $derived(sprints.find((s) => s.status === "active"));
+
+  // Calculate total points
+  function getTotalPoints(tasks) {
+    return tasks.reduce((sum, task) => {
+      const points = parseInt(task.points) || 0;
+      return sum + points;
+    }, 0);
+  }
+
+  // Task modal functions
+  function openTaskModal() {
+    taskModalMode = "create";
+    selectedTask = null;
+    taskModalOpen = true;
+  }
+
+  function editTask(task) {
+    taskModalMode = "edit";
+    selectedTask = task;
+    taskModalOpen = true;
+  }
+
+  function viewTaskDetail(task) {
+    detailTask = task;
+    detailModalOpen = true;
+  }
+
+  // Move task to active sprint
+  function moveToSprint(taskId) {
+    if (!activeSprint) {
+      toastStore.warning("No active sprint available");
+      return;
+    }
+    taskStore.update(taskId, { sprintId: activeSprint.id });
+    toastStore.success("Task added to sprint");
+  }
+
+  // Priority colors
+  const priorityColors = {
+    critical: { bg: "bg-rose-500/10", border: "border-rose-500/30", text: "text-rose-500" },
+    high: { bg: "bg-orange-500/10", border: "border-orange-500/30", text: "text-orange-500" },
+    medium: { bg: "bg-yellow-500/10", border: "border-yellow-500/30", text: "text-yellow-500" },
+    low: { bg: "bg-blue-500/10", border: "border-blue-500/30", text: "text-blue-500" },
+  };
+
+  function getPriorityColor(priority) {
+    return priorityColors[priority] || priorityColors.medium;
+  }
+</script>
+
+<main class="min-h-screen px-6 pt-6 pb-10">
+  <!-- Header with Title & Description -->
+  <header class="mb-6">
+    <h1 class="text-3xl font-bold text-foreground">Product Backlog</h1>
+    <p class="text-muted-foreground mt-1">Prioritize and prepare items for the next sprint</p>
+  </header>
+
+  <div class="space-y-6">
+    <!-- Stats Card -->
+    <div class="rounded-2xl border border-border bg-card p-6 shadow-sm">
+      <div class="flex flex-wrap items-center justify-between gap-4 mb-5">
+        <div>
+          <h2 class="text-lg font-semibold text-foreground">Backlog Overview</h2>
+          <p class="text-sm text-muted-foreground">Track your backlog metrics</p>
+        </div>
+        <button
+          type="button"
+          class="btn btn-primary shadow-sm"
+          onclick={openTaskModal}
+        >
+          <Plus size={16} />
+          New backlog item
+        </button>
+      </div>
+
+      <!-- Stats Grid -->
+      <div class="grid gap-4 sm:grid-cols-3">
+        <div class="rounded-xl border border-border bg-background px-4 py-3">
+          <p class="text-xs uppercase tracking-wide text-muted-foreground">
+            Backlog items
+          </p>
+          <p class="mt-2 text-2xl font-bold text-foreground">
+            {backlogItems.length}
+          </p>
+        </div>
+        <div class="rounded-xl border border-border bg-background px-4 py-3">
+          <p class="text-xs uppercase tracking-wide text-muted-foreground">
+            Active sprint
+          </p>
+          <p class="mt-2 text-sm font-semibold text-foreground">
+            {activeSprint ? activeSprint.name : "None"}
+          </p>
+        </div>
+        <div class="rounded-xl border border-border bg-background px-4 py-3">
+          <p class="text-xs uppercase tracking-wide text-muted-foreground">
+            Points in backlog
+          </p>
+          <p class="mt-2 text-2xl font-bold text-foreground">
+            {getTotalPoints(backlogItems)}
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Backlog List -->
+    <div class="rounded-2xl border border-border bg-card p-6 shadow-sm">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-base font-semibold text-foreground">Backlog Items</h3>
+      </div>
+
+      <div class="grid gap-4 md:grid-cols-2">
+        {#each backlogItems as task (task.id)}
+          {@const priorityColor = getPriorityColor(task.priority || "medium")}
+          <article class="rounded-xl border border-border bg-background p-5 shadow-sm hover:shadow-md transition-shadow">
+            <div class="flex items-start justify-between gap-3">
+              <!-- Content -->
+              <div class="flex-1 min-w-0">
+                <button
+                  type="button"
+                  class="text-left w-full mb-2"
+                  onclick={() => viewTaskDetail(task)}
+                >
+                  <h4 class="text-base font-bold text-foreground leading-tight break-words">
+                    {task.title}
+                  </h4>
+                </button>
+
+                {#if task.description}
+                  <button
+                    type="button"
+                    class="mb-3 text-xs text-muted-foreground text-left w-full prose prose-xs dark:prose-invert max-w-none overflow-hidden relative"
+                    style="max-height: 3.6em; -webkit-mask-image: linear-gradient(to bottom, black 50%, transparent 100%); mask-image: linear-gradient(to bottom, black 50%, transparent 100%);"
+                    onclick={() => viewTaskDetail(task)}
+                  >
+                    {@html marked(task.description)}
+                  </button>
+                {/if}
+
+                <!-- Badges -->
+                <div class="flex flex-wrap items-center gap-2">
+                  <span class="inline-flex items-center rounded-full border border-border bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-foreground">
+                    {task.type || "story"}
+                  </span>
+
+                  {#if task.points}
+                    <span class="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                      {task.points} pts
+                    </span>
+                  {/if}
+
+                  <span class={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${priorityColor.bg} ${priorityColor.border} ${priorityColor.text}`}>
+                    {task.priority || "medium"}
+                  </span>
+
+                  {#if task.epic}
+                    <span class="inline-flex items-center rounded-full border border-secondary/30 bg-secondary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-secondary">
+                      <Target size={10} class="mr-1" />
+                      {task.epic}
+                    </span>
+                  {/if}
+                </div>
+              </div>
+
+              <!-- Actions -->
+              <div class="flex flex-col gap-2 flex-shrink-0">
+                {#if activeSprint}
+                  <button
+                    type="button"
+                    class="btn btn-primary px-3 py-1.5 text-[11px] whitespace-nowrap"
+                    onclick={() => moveToSprint(task.id)}
+                    title="Add to {activeSprint.name}"
+                  >
+                    <TrendingUp size={12} />
+                    Add to sprint
+                  </button>
+                {/if}
+                <button
+                  type="button"
+                  class="btn btn-secondary px-3 py-1.5 text-[11px]"
+                  onclick={() => editTask(task)}
+                >
+                  <Pencil size={12} />
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-ghost px-3 py-1.5 text-[11px]"
+                  onclick={() => viewTaskDetail(task)}
+                >
+                  <Eye size={12} />
+                  View
+                </button>
+              </div>
+            </div>
+          </article>
+        {:else}
+          <div class="col-span-2 rounded-xl border border-dashed border-border p-8 text-center">
+            <p class="text-sm text-muted-foreground">
+              Backlog is empty. Add items to plan your next sprint.
+            </p>
+            <button
+              type="button"
+              class="btn btn-primary mt-4"
+              onclick={openTaskModal}
+            >
+              <Plus size={16} />
+              Create first item
+            </button>
+          </div>
+        {/each}
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Task Modal -->
+<TaskModal
+  bind:open={taskModalOpen}
+  mode={taskModalMode}
+  task={selectedTask}
+/>
+
+<!-- Task Detail Modal -->
+<TaskDetailModal
+  bind:open={detailModalOpen}
+  task={detailTask}
+  onEdit={editTask}
+  onDelete={(task) => {
+    taskStore.delete(task.id);
+    detailModalOpen = false;
+  }}
+/>

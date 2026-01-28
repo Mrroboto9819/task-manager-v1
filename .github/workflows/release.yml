@@ -10,7 +10,7 @@ jobs:
     runs-on: ${{ matrix.platform }}
     strategy:
       matrix:
-        platform: [ubuntu-latest, windows-latest]
+        platform: [ubuntu-latest, windows-latest, macos-latest]
 
     permissions:
       contents: write
@@ -34,7 +34,7 @@ jobs:
             librsvg2-dev \
             patchelf
 
-      - name: Build and publish (Windows/Linux)
+      - name: Build and publish (Windows/Linux/macOS)
         uses: tauri-apps/tauri-action@v0.6.0
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}

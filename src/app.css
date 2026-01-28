@@ -2,85 +2,231 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  @apply bg-slate-50 text-slate-900;
+@layer base {
+  :root {
+    /* Core backgrounds */
+    --background: 210 20% 98%;
+    --foreground: 222 47% 11%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+
+    /* Primary - Set dynamically by theme.svelte.js */
+    /* --primary: set by JavaScript */
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary */
+    --secondary: 210 20% 96%;
+    --secondary-foreground: 222 47% 11%;
+
+    /* Muted */
+    --muted: 210 20% 96%;
+    --muted-foreground: 215 16% 47%;
+
+    /* Accent */
+    --accent: 172 66% 95%;
+    --accent-foreground: 172 66% 30%;
+
+    /* Destructive */
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Borders and inputs */
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    /* --ring: set by JavaScript */
+
+    /* Status colors */
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 222 47% 11%;
+
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+
+    /* Action colors */
+    /* --emerald: set by JavaScript */
+    --emerald-foreground: 0 0% 100%;
+
+    /* Sidebar */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 222 47% 11%;
+    /* --sidebar-primary: set by JavaScript */
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 210 20% 96%;
+    --sidebar-accent-foreground: 222 47% 11%;
+    --sidebar-border: 214 32% 91%;
+    /* --sidebar-ring: set by JavaScript */
+
+    --radius: 0.5rem;
+  }
+
+  .dark {
+    /* Core backgrounds - Deep navy/charcoal */
+    --background: 224 71% 4%;
+    --foreground: 210 20% 98%;
+
+    --card: 224 50% 8%;
+    --card-foreground: 210 20% 98%;
+
+    --popover: 224 50% 8%;
+    --popover-foreground: 210 20% 98%;
+
+    /* Primary - Set dynamically by theme.svelte.js */
+    /* --primary: set by JavaScript */
+    --primary-foreground: 0 0% 100%;
+
+    /* Secondary */
+    --secondary: 224 40% 12%;
+    --secondary-foreground: 210 20% 98%;
+
+    /* Muted */
+    --muted: 224 40% 12%;
+    --muted-foreground: 215 20% 65%;
+
+    /* Accent */
+    --accent: 224 40% 16%;
+    --accent-foreground: 172 66% 50%;
+
+    /* Destructive */
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    /* Borders and inputs */
+    --border: 224 40% 16%;
+    --input: 224 40% 16%;
+    /* --ring: set by JavaScript */
+
+    /* Status colors */
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 38 92% 50%;
+    --warning-foreground: 222 47% 11%;
+
+    --info: 199 89% 48%;
+    --info-foreground: 0 0% 100%;
+
+    /* Action colors */
+    /* --emerald: set by JavaScript */
+    --emerald-foreground: 0 0% 100%;
+
+    /* Sidebar */
+    --sidebar-background: 224 50% 6%;
+    --sidebar-foreground: 210 20% 98%;
+    /* --sidebar-primary: set by JavaScript */
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 224 40% 12%;
+    --sidebar-accent-foreground: 210 20% 98%;
+    --sidebar-border: 224 40% 16%;
+    /* --sidebar-ring: set by JavaScript */
+  }
+
+  body {
+    @apply bg-background text-foreground transition-colors duration-300;
+  }
+
+  * {
+    @apply border-border;
+  }
 }
 
-.app-shell {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
-}
+@layer components {
 
-.titlebar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 44px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 12px;
-  background: linear-gradient(120deg, #0f172a, #1f2937, #0f172a);
-  color: #e2e8f0;
-  border-bottom: 1px solid rgba(15, 23, 42, 0.35);
-  z-index: 50;
-}
+  /* App Shell Styles */
+  .app-shell {
+    @apply flex flex-col h-screen overflow-hidden bg-background;
+  }
 
-.titlebar__brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 12px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-}
+  .titlebar {
+    @apply flex items-center justify-between h-10 px-4 bg-card border-b border-border select-none;
+  }
 
-.titlebar__dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: #22c55e;
-  box-shadow: 0 0 12px rgba(34, 197, 94, 0.6);
-}
+  .titlebar__brand {
+    @apply flex items-center gap-2 text-sm font-medium text-foreground;
+  }
 
-.titlebar__actions {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
+  .titlebar__dot {
+    @apply w-2 h-2 rounded-full bg-primary;
+  }
 
-.titlebar__btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 24px;
-  border-radius: 6px;
-  border: 1px solid rgba(148, 163, 184, 0.3);
-  background: rgba(15, 23, 42, 0.35);
-  color: #e2e8f0;
-  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
-}
+  .titlebar__actions {
+    @apply flex items-center gap-1;
+  }
 
-.titlebar__btn:hover {
-  background: rgba(148, 163, 184, 0.25);
-  border-color: rgba(148, 163, 184, 0.6);
-  transform: translateY(-1px);
-}
+  .titlebar__btn {
+    @apply flex items-center justify-center w-8 h-8 rounded-md text-muted-foreground hover:bg-accent hover:text-foreground transition-colors bg-transparent border-none cursor-pointer;
+  }
 
-.titlebar__btn--close {
-  background: rgba(239, 68, 68, 0.2);
-  border-color: rgba(239, 68, 68, 0.4);
-}
+  .titlebar__btn--close:hover {
+    @apply bg-destructive text-destructive-foreground;
+  }
 
-.titlebar__btn--close:hover {
-  background: rgba(239, 68, 68, 0.4);
-  border-color: rgba(239, 68, 68, 0.8);
-}
+  .app-body {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-height: calc(100vh - 40px);
+  }
 
-.app-body {
-  padding-top: 44px;
-  min-height: 100vh;
+  /* Scrollbar Utilities */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Button Styles */
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-primary-foreground shadow-sm hover:bg-primary/90 focus-visible:ring-primary;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80 focus-visible:ring-secondary;
+  }
+
+  .btn-ghost {
+    @apply hover:bg-accent hover:text-accent-foreground focus-visible:ring-accent;
+  }
+
+  .btn-destructive {
+    @apply bg-destructive text-destructive-foreground shadow-sm hover:bg-destructive/90 focus-visible:ring-destructive;
+  }
+
+  /* Custom color classes for task management */
+  .bg-main-bg {
+    @apply bg-background;
+  }
+
+  .bg-bg-secondary {
+    @apply bg-card;
+  }
+
+  .bg-surface {
+    @apply bg-card;
+  }
+
+  .text-text-main {
+    @apply text-foreground;
+  }
+
+  .text-text-muted {
+    @apply text-muted-foreground;
+  }
+
+  .border-border-subtle {
+    @apply border-border;
+  }
 }
