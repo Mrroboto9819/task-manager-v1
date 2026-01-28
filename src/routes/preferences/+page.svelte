@@ -109,12 +109,14 @@
 
       <div>
         <label
+          for="user-name-input"
           class="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
         >
           Display Name
         </label>
         <div class="mt-2 flex gap-3">
           <input
+            id="user-name-input"
             type="text"
             class="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
             bind:value={userName}
@@ -154,6 +156,7 @@
           </div>
           <button
             type="button"
+            aria-label="Toggle dark mode"
             class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors {darkMode
               ? 'bg-primary'
               : 'bg-muted'}"

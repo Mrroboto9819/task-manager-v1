@@ -23,7 +23,7 @@
     kanban: KanbanSquare,
   };
 
-  let IconComponent = icons[icon] || icons.inbox;
+  let IconComponent = $derived(icons[icon] || icons.inbox);
 </script>
 
 <div class="flex flex-col items-center justify-center py-12 px-4 text-center">

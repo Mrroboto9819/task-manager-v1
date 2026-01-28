@@ -36,11 +36,11 @@
     Settings,
   } from "lucide-svelte";
   import { marked } from "marked";
-  import Modal from "../lib/Modal.svelte";
-  import Switch from "../lib/Switch.svelte";
-  import EmptyState from "../lib/EmptyState.svelte";
-  import { toastStore } from "../lib/toastStore.svelte.js";
-  import { useKeyboardShortcuts } from "../lib/useKeyboardShortcuts.svelte.js";
+  import Modal from "../../lib/Modal.svelte";
+  import Switch from "../../lib/Switch.svelte";
+  import EmptyState from "../../lib/EmptyState.svelte";
+  import { toastStore } from "../../lib/toastStore.svelte.js";
+  import { useKeyboardShortcuts } from "../../lib/useKeyboardShortcuts.svelte.js";
   import gsap from "gsap";
   import { dndzone } from "svelte-dnd-action";
   import { flip } from "svelte/animate";
@@ -1948,16 +1948,13 @@
                           <div class="mt-1 text-text-main">
                             <CheckCircle size={18} strokeWidth={2.5} />
                           </div>
-                          <h3
-                            class="text-lg font-bold text-text-main leading-tight break-words flex-1 cursor-pointer"
-                            role="button"
-                            tabindex="0"
+                          <button
+                            type="button"
+                            class="text-lg font-bold text-text-main leading-tight break-words flex-1 cursor-pointer text-left"
                             onclick={() => openTaskModal("edit", task)}
-                            onkeydown={(e) =>
-                              e.key === "Enter" && openTaskModal("edit", task)}
                           >
                             {task.title}
-                          </h3>
+                          </button>
                         </div>
 
                         <!-- Description -->
