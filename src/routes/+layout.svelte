@@ -4,6 +4,7 @@
   import { Minus, Square, X, Moon, Sun } from "lucide-svelte";
   import ToastContainer from "../lib/ToastContainer.svelte";
   import Sidebar from "../lib/components/Sidebar.svelte";
+  import UpdateScreen from "../lib/UpdateScreen.svelte";
   import { hydrateAllStores } from "../lib/stores/index.js";
 
   let { children } = $props();
@@ -13,6 +14,12 @@
   let mounted = $state(false);
   let sidebarCollapsed = $state(false);
   let contentElement: HTMLElement | undefined = $state();
+
+  // Update screen state
+  let updateVisible = $state(false);
+  let updateStatus = $state<"checking" | "downloading" | "installing" | "restarting">("checking");
+  let updateProgress = $state(0);
+  let updateVersion = $state("");
 
   onMount(async () => {
     mounted = true;
@@ -38,7 +45,97 @@
       darkMode = window.matchMedia("(prefers-color-scheme: dark)").matches;
     }
     applyDarkMode();
+
+    // Setup Tauri updater
+    setupUpdater();
+
+    // Add keyboard shortcut for testing update screen (Ctrl+Shift+U)
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.ctrlKey && e.shiftKey && e.key === "U") {
+        e.preventDefault();
+        testUpdateScreen();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+
+    // Cleanup
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
   });
+
+  async function setupUpdater() {
+    try {
+      const { checkUpdate } = await import("@tauri-apps/plugin-updater");
+      const { relaunch } = await import("@tauri-apps/plugin-process");
+
+      // Check for updates on app start
+      const update = await checkUpdate();
+
+      if (update?.available) {
+        updateVisible = true;
+        updateStatus = "downloading";
+        // Set the actual version from the update manifest
+        updateVersion = update.version || "";
+
+        // Download and install the update
+        await update.downloadAndInstall((event) => {
+          switch (event.event) {
+            case "Started":
+              updateStatus = "downloading";
+              updateProgress = 0;
+              break;
+            case "Progress":
+              updateProgress = event.data.chunkLength && event.data.contentLength
+                ? Math.round((event.data.chunkLength / event.data.contentLength) * 100)
+                : 0;
+              break;
+            case "Finished":
+              updateStatus = "installing";
+              updateProgress = 100;
+              break;
+          }
+        });
+
+        updateStatus = "restarting";
+        // Wait a moment before restarting
+        setTimeout(() => {
+          relaunch();
+        }, 1000);
+      }
+    } catch (error) {
+      console.error("Update check failed:", error);
+      updateVisible = false;
+    }
+  }
+
+  // Test function for development
+  function testUpdateScreen() {
+    updateVisible = true;
+    updateStatus = "checking";
+    updateProgress = 0;
+    updateVersion = "2.0.0";
+
+    // Simulate update progress
+    setTimeout(() => {
+      updateStatus = "downloading";
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += 5;
+        updateProgress = progress;
+        if (progress >= 100) {
+          clearInterval(interval);
+          updateStatus = "installing";
+          setTimeout(() => {
+            updateStatus = "restarting";
+            setTimeout(() => {
+              updateVisible = false;
+            }, 2000);
+          }, 1500);
+        }
+      }, 200);
+    }, 1000);
+  }
 
   function applyDarkMode() {
     if (darkMode) {
@@ -116,4 +213,12 @@
 
   <!-- Toast Notifications -->
   <ToastContainer />
+
+  <!-- Update Screen -->
+  <UpdateScreen
+    visible={updateVisible}
+    status={updateStatus}
+    progress={updateProgress}
+    version={updateVersion}
+  />
 </div>
