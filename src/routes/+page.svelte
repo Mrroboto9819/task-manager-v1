@@ -202,6 +202,7 @@
   let statusKind = $state("info");
   let statusTimer = $state(null);
   let taskDndItems = $state({});
+  let appVersion = $state("dev");
 
   // Scroll containers for status columns
   let sprintScrollContainer = $state(null);
@@ -1056,6 +1057,15 @@
     }
   }
 
+  async function loadAppVersion() {
+    try {
+      const { getVersion } = await import("@tauri-apps/api/app");
+      appVersion = await getVersion();
+    } catch {
+      appVersion = "dev";
+    }
+  }
+
   onMount(() => {
     hydrate();
     gsap.from("main", { opacity: 0, duration: 0.6, ease: "power2.out" });
@@ -1066,6 +1076,7 @@
       delay: 0.2,
       ease: "power2.out",
     });
+    loadAppVersion();
     checkForUpdates();
   });
 </script>
@@ -1073,6 +1084,9 @@
 <main
   class="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 px-6 py-10"
 >
+  <div class="fixed right-6 top-6 z-50 rounded-full border border-slate-200 bg-white/90 px-3 py-1 text-[10px] font-semibold uppercase tracking-wide text-slate-500 shadow-sm backdrop-blur">
+    v{appVersion}
+  </div>
   <div class="mx-auto flex w-full max-w-6xl flex-col gap-8">
     <header class="flex flex-wrap items-center justify-between gap-4">
       <div>
