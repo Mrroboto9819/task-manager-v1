@@ -3,6 +3,7 @@ on:
   push:
     tags:
       - "v*.*.*"
+      - "V*.*.*"
 
 jobs:
   build:
@@ -34,7 +35,7 @@ jobs:
             patchelf
 
       - name: Build and publish (Windows/Linux)
-        uses: tauri-apps/tauri-action@v1
+        uses: tauri-apps/tauri-action@v0.6.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
