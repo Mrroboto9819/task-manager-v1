@@ -27,7 +27,7 @@
     "updater": {
       "active": true,
       "endpoints": [
-        "https://github.com/Mrroboto9819/task-manager-v1/releases/download/latest.json"
+        "https://github.com/Mrroboto9819/task-manager-v1/releases/download/v3.0.2/latest.json"
       ],
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDg5REJCNEJENjA3QjRBRkIKUldUN1NudGd2YlRiaVFRWVhHSDcydU90QjVZVCswRkNBbjVTNHdCN05vZmk4WEdTMW4wd3BlT2IK"
     }
