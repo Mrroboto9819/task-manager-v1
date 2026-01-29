@@ -340,11 +340,12 @@
     {/if}
 
     <!-- Kanban Board -->
-    <div class="w-full overflow-x-auto overflow-y-hidden pb-2 scroll-smooth" style="max-height: calc(100vh - 380px);">
-      <div class="flex gap-4 min-w-max" style="height: calc(100vh - 400px);">
+    <div class="w-full overflow-x-auto pb-2 scroll-smooth">
+      <div class="flex gap-4 min-w-max pb-4">
         {#each visibleStatuses as statusItem (statusItem.id)}
           <div
             class="flex w-[320px] flex-none flex-col rounded-2xl border border-border bg-card p-4 shadow-sm transition-all"
+            style="min-height: calc(100vh - 400px);"
             role="list"
           >
               <div class="flex items-center justify-between mb-4">

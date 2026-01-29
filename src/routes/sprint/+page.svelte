@@ -416,14 +416,15 @@
 
         <div
           bind:this={sprintScrollContainer}
-          class={`flex-1 pb-2 scroll-smooth max-h-[calc(100vh-320px)] overflow-y-auto ${
+          class={`flex-1 pb-2 scroll-smooth ${
             settings.showScrollButtons ? "overflow-x-hidden" : "overflow-x-auto"
           }`}
         >
-          <section class="flex min-w-max gap-4">
+          <section class="flex min-w-max gap-4 pb-4">
             {#each visibleStatuses as statusItem (statusItem.id)}
               <div
-                class="flex min-h-[420px] w-[320px] flex-none flex-col rounded-2xl border border-border bg-card p-4 shadow-sm transition-all"
+                class="flex w-[320px] flex-none flex-col rounded-2xl border border-border bg-card p-4 shadow-sm transition-all"
+                style="min-height: calc(100vh - 450px);"
                 role="list"
               >
                 <div class="flex items-center justify-between mb-4">

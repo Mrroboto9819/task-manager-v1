@@ -87,17 +87,24 @@
         // Set the actual version from the update manifest
         updateVersion = update.version || "";
 
+        // Track download progress
+        let downloaded = 0;
+        let contentLength = 0;
+
         // Download and install the update
         await update.downloadAndInstall((event) => {
           switch (event.event) {
             case "Started":
               updateStatus = "downloading";
+              contentLength = event.data.contentLength || 0;
+              downloaded = 0;
               updateProgress = 0;
               break;
             case "Progress":
-              updateProgress = event.data.chunkLength && event.data.contentLength
-                ? Math.round((event.data.chunkLength / event.data.contentLength) * 100)
-                : 0;
+              downloaded += event.data.chunkLength;
+              if (contentLength > 0) {
+                updateProgress = Math.round((downloaded / contentLength) * 100);
+              }
               break;
             case "Finished":
               updateStatus = "installing";
