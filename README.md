@@ -29,6 +29,16 @@ Build installers (current OS only):
 bun run tauri build
 ```
 
+## macOS Users
+
+If you download the pre-built `.app` from GitHub Releases, macOS may block it because the app is not signed with an Apple Developer certificate. To run it, open Terminal and execute:
+
+```bash
+xattr -cr ~/Downloads/task-manager-v1.app
+```
+
+Then open the app normally. This removes the quarantine attribute that macOS adds to downloaded files.
+
 ## License
 
 MIT License. You are free to use, modify, and distribute this project, including for commercial use, as long as the original copyright and license notice are included in copies or substantial portions of the software.
