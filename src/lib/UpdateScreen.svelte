@@ -32,16 +32,16 @@
         <div class="absolute inset-0 animate-ping opacity-20">
           <div class="h-24 w-24 rounded-full bg-primary"></div>
         </div>
-        <div class="relative flex h-24 w-24 items-center justify-center rounded-full bg-primary shadow-2xl shadow-primary/50">
+        <div
+          class="relative flex h-24 w-24 items-center justify-center rounded-full bg-primary shadow-2xl shadow-primary/50"
+        >
           <Download class="h-12 w-12 text-primary-foreground" strokeWidth={2} />
         </div>
       </div>
 
       <!-- Status Text -->
       <div class="text-center">
-        <h1 class="text-2xl font-bold text-foreground mb-2">
-          TaskFlow
-        </h1>
+        <h1 class="text-2xl font-bold text-foreground mb-2">TaskFlow</h1>
         <p class="text-lg text-muted-foreground">
           {statusMessages[status]}
         </p>
@@ -96,7 +96,8 @@
 
 <style>
   @keyframes bounce {
-    0%, 100% {
+    0%,
+    100% {
       transform: translateY(0);
     }
     50% {
