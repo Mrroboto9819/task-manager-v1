@@ -16,7 +16,14 @@
   } from "lucide-svelte";
   import { onMount } from "svelte";
   import ConfirmModal from "../../lib/components/ConfirmModal.svelte";
-  import { currentUserStore, themeStore, settingsStore, downloadExportedData, importDataFromFile } from "../../lib/stores/index.js";
+  import {
+    currentUserStore,
+    themeStore,
+    settingsStore,
+    downloadExportedData,
+    importDataFromFile,
+    importDataWithDialog,
+  } from "../../lib/stores/index.js";
   import { _, locale, supportedLocales, setLocale } from "$lib/i18n";
 
   let darkMode = $state(true);
@@ -29,9 +36,21 @@
   let isImporting = $state(false);
 
   const methodologies = [
-    { id: "agile", labelKey: "preferences.methodology.agile", descKey: "preferences.methodology.agileDesc" },
-    { id: "kanban", labelKey: "preferences.methodology.kanban", descKey: "preferences.methodology.kanbanDesc" },
-    { id: "waterfall", labelKey: "preferences.methodology.waterfall", descKey: "preferences.methodology.waterfallDesc" },
+    {
+      id: "agile",
+      labelKey: "preferences.methodology.agile",
+      descKey: "preferences.methodology.agileDesc",
+    },
+    {
+      id: "kanban",
+      labelKey: "preferences.methodology.kanban",
+      descKey: "preferences.methodology.kanbanDesc",
+    },
+    {
+      id: "waterfall",
+      labelKey: "preferences.methodology.waterfall",
+      descKey: "preferences.methodology.waterfallDesc",
+    },
   ];
 
   const themeColors = [
@@ -93,12 +112,24 @@
     confirmClearDataOpen = true;
   }
 
-  function handleExportData() {
-    downloadExportedData();
+  async function handleExportData() {
+    await downloadExportedData();
   }
 
-  function handleImportClick() {
-    fileInput?.click();
+  async function handleImportClick() {
+    isImporting = true;
+    try {
+      // Try native dialog first
+      const success = await importDataWithDialog();
+      if (!success) {
+        // If native dialog failed or was cancelled, try file input fallback
+        fileInput?.click();
+      }
+    } catch {
+      // Fallback to file input
+      fileInput?.click();
+    }
+    isImporting = false;
   }
 
   async function handleFileSelected(event: Event) {
@@ -116,7 +147,12 @@
 
   function handleClearData() {
     // Clear all localStorage except theme preferences and language
-    const keysToKeep = ["darkMode", "themeColor", "userName", "taskflow_locale"];
+    const keysToKeep = [
+      "darkMode",
+      "themeColor",
+      "userName",
+      "taskflow_locale",
+    ];
     const keysToRemove: string[] = [];
 
     for (let i = 0; i < localStorage.length; i++) {
@@ -141,7 +177,9 @@
         <SlidersHorizontal size={24} class="text-primary" />
       </div>
       <div>
-        <h1 class="text-3xl font-bold text-foreground">{$_("preferences.title")}</h1>
+        <h1 class="text-3xl font-bold text-foreground">
+          {$_("preferences.title")}
+        </h1>
         <p class="text-muted-foreground mt-1">
           {$_("preferences.description")}
         </p>
@@ -154,7 +192,9 @@
     <section class="rounded-2xl border border-border bg-card p-6 shadow-sm">
       <div class="flex items-center gap-3 mb-4">
         <User size={20} class="text-primary" />
-        <h2 class="text-lg font-semibold text-foreground">{$_("preferences.userProfile.title")}</h2>
+        <h2 class="text-lg font-semibold text-foreground">
+          {$_("preferences.userProfile.title")}
+        </h2>
       </div>
 
       <div>
@@ -183,7 +223,9 @@
     <section class="rounded-2xl border border-border bg-card p-6 shadow-sm">
       <div class="flex items-center gap-3 mb-4">
         <Palette size={20} class="text-primary" />
-        <h2 class="text-lg font-semibold text-foreground">{$_("preferences.appearance.title")}</h2>
+        <h2 class="text-lg font-semibold text-foreground">
+          {$_("preferences.appearance.title")}
+        </h2>
       </div>
 
       <div class="space-y-4">
@@ -198,7 +240,9 @@
               <Sun size={20} class="text-foreground" />
             {/if}
             <div>
-              <p class="text-sm font-semibold text-foreground">{$_("preferences.appearance.darkMode")}</p>
+              <p class="text-sm font-semibold text-foreground">
+                {$_("preferences.appearance.darkMode")}
+              </p>
               <p class="text-xs text-muted-foreground">
                 {$_("preferences.appearance.darkModeDescription")}
               </p>
@@ -222,7 +266,9 @@
 
         <!-- Theme Color Picker -->
         <div class="p-4 rounded-lg bg-muted/30">
-          <p class="text-sm font-semibold text-foreground mb-3">{$_("preferences.appearance.themeColor")}</p>
+          <p class="text-sm font-semibold text-foreground mb-3">
+            {$_("preferences.appearance.themeColor")}
+          </p>
           <div class="grid grid-cols-3 gap-3">
             {#each themeColors as theme}
               <button
@@ -251,22 +297,33 @@
     <section class="rounded-2xl border border-border bg-card p-6 shadow-sm">
       <div class="flex items-center gap-3 mb-4">
         <Globe size={20} class="text-primary" />
-        <h2 class="text-lg font-semibold text-foreground">{$_("preferences.language.title")}</h2>
+        <h2 class="text-lg font-semibold text-foreground">
+          {$_("preferences.language.title")}
+        </h2>
       </div>
 
       <div class="p-4 rounded-lg bg-muted/30">
-        <p class="text-sm text-muted-foreground mb-3">{$_("preferences.language.description")}</p>
+        <p class="text-sm text-muted-foreground mb-3">
+          {$_("preferences.language.description")}
+        </p>
         <div class="grid grid-cols-2 gap-3">
           {#each supportedLocales as lang}
             <button
               type="button"
-              class="flex items-center gap-3 px-4 py-3 rounded-lg border-2 transition-all {$locale === lang.code
+              class="flex items-center gap-3 px-4 py-3 rounded-lg border-2 transition-all {$locale ===
+              lang.code
                 ? 'border-foreground bg-muted/50'
                 : 'border-border hover:border-muted-foreground'}"
               onclick={() => setLocale(lang.code)}
             >
-              <img src={lang.flag} alt={lang.name} class="w-6 h-5 object-cover rounded-sm" />
-              <span class="text-sm font-medium text-foreground">{lang.name}</span>
+              <img
+                src={lang.flag}
+                alt={lang.name}
+                class="w-6 h-5 object-cover rounded-sm"
+              />
+              <span class="text-sm font-medium text-foreground"
+                >{lang.name}</span
+              >
             </button>
           {/each}
         </div>
@@ -278,8 +335,12 @@
       <div class="flex items-center gap-3 mb-4">
         <Workflow size={20} class="text-primary" />
         <div>
-          <h2 class="text-lg font-semibold text-foreground">{$_("preferences.methodology.title")}</h2>
-          <p class="text-sm text-muted-foreground">{$_("preferences.methodology.description")}</p>
+          <h2 class="text-lg font-semibold text-foreground">
+            {$_("preferences.methodology.title")}
+          </h2>
+          <p class="text-sm text-muted-foreground">
+            {$_("preferences.methodology.description")}
+          </p>
         </div>
       </div>
 
@@ -287,18 +348,26 @@
         {#each methodologies as m}
           <button
             type="button"
-            class="w-full flex items-start gap-4 p-4 rounded-lg border-2 transition-all text-left {methodology === m.id
+            class="w-full flex items-start gap-4 p-4 rounded-lg border-2 transition-all text-left {methodology ===
+            m.id
               ? 'border-primary bg-primary/5'
               : 'border-border hover:border-muted-foreground bg-muted/30'}"
             onclick={() => handleMethodologyChange(m.id)}
           >
-            <div class="flex-shrink-0 w-5 h-5 mt-0.5 rounded-full border-2 flex items-center justify-center {methodology === m.id ? 'border-primary' : 'border-muted-foreground'}">
+            <div
+              class="flex-shrink-0 w-5 h-5 mt-0.5 rounded-full border-2 flex items-center justify-center {methodology ===
+              m.id
+                ? 'border-primary'
+                : 'border-muted-foreground'}"
+            >
               {#if methodology === m.id}
                 <div class="w-2.5 h-2.5 rounded-full bg-primary"></div>
               {/if}
             </div>
             <div class="flex-1">
-              <p class="text-sm font-semibold text-foreground">{$_(m.labelKey)}</p>
+              <p class="text-sm font-semibold text-foreground">
+                {$_(m.labelKey)}
+              </p>
               <p class="text-xs text-muted-foreground mt-1">{$_(m.descKey)}</p>
             </div>
           </button>
@@ -311,13 +380,17 @@
       <section class="rounded-2xl border border-border bg-card p-6 shadow-sm">
         <div class="flex items-center gap-3 mb-4">
           <CalendarCheck size={20} class="text-primary" />
-          <h2 class="text-lg font-semibold text-foreground">{$_("preferences.sprintSettings.title")}</h2>
+          <h2 class="text-lg font-semibold text-foreground">
+            {$_("preferences.sprintSettings.title")}
+          </h2>
         </div>
 
         <div class="p-4 rounded-lg bg-muted/30">
           <div class="flex items-center justify-between">
             <div class="flex-1">
-              <p class="text-sm font-semibold text-foreground">{$_("preferences.sprintSettings.autoFinish")}</p>
+              <p class="text-sm font-semibold text-foreground">
+                {$_("preferences.sprintSettings.autoFinish")}
+              </p>
               <p class="text-xs text-muted-foreground mt-1">
                 {$_("preferences.sprintSettings.autoFinishDescription")}
               </p>
@@ -343,14 +416,20 @@
 
     <!-- App Information -->
     <section class="rounded-2xl border border-border bg-card p-6 shadow-sm">
-      <h2 class="text-lg font-semibold text-foreground mb-4">{$_("preferences.about.title")}</h2>
+      <h2 class="text-lg font-semibold text-foreground mb-4">
+        {$_("preferences.about.title")}
+      </h2>
       <div class="space-y-2 text-sm">
         <div class="flex justify-between">
-          <span class="text-muted-foreground">{$_("preferences.about.version")}</span>
-          <span class="text-foreground font-medium">2.1.4</span>
+          <span class="text-muted-foreground"
+            >{$_("preferences.about.version")}</span
+          >
+          <span class="text-foreground font-medium">{__APP_VERSION__}</span>
         </div>
         <div class="flex justify-between">
-          <span class="text-muted-foreground">{$_("preferences.about.storageUsed")}</span>
+          <span class="text-muted-foreground"
+            >{$_("preferences.about.storageUsed")}</span
+          >
           <span class="text-foreground font-medium">
             {Math.round(JSON.stringify(localStorage).length / 1024)} KB
           </span>
@@ -362,13 +441,17 @@
     <section class="rounded-2xl border border-border bg-card p-6 shadow-sm">
       <div class="flex items-center gap-3 mb-4">
         <Database size={20} class="text-primary" />
-        <h2 class="text-lg font-semibold text-foreground">{$_("preferences.dataManagement.title")}</h2>
+        <h2 class="text-lg font-semibold text-foreground">
+          {$_("preferences.dataManagement.title")}
+        </h2>
       </div>
 
       <div class="space-y-3">
         <!-- Export/Import -->
         <div class="p-4 rounded-lg bg-muted/30">
-          <p class="text-sm font-semibold text-foreground mb-2">{$_("preferences.dataManagement.backupRestore")}</p>
+          <p class="text-sm font-semibold text-foreground mb-2">
+            {$_("preferences.dataManagement.backupRestore")}
+          </p>
           <p class="text-xs text-muted-foreground mb-3">
             {$_("preferences.dataManagement.backupDescription")}
           </p>
@@ -388,7 +471,9 @@
               disabled={isImporting}
             >
               <Upload size={16} />
-              {isImporting ? $_("common.loading") : $_("preferences.dataManagement.import")}
+              {isImporting
+                ? $_("common.loading")
+                : $_("preferences.dataManagement.import")}
             </button>
             <input
               type="file"
@@ -406,8 +491,12 @@
             <div class="flex items-center gap-2">
               <Trash2 size={16} class="text-rose-500" />
               <div>
-                <p class="text-sm font-semibold text-foreground">{$_("preferences.dataManagement.clearData")}</p>
-                <p class="text-xs text-muted-foreground">{$_("preferences.dataManagement.clearDataDescription")}</p>
+                <p class="text-sm font-semibold text-foreground">
+                  {$_("preferences.dataManagement.clearData")}
+                </p>
+                <p class="text-xs text-muted-foreground">
+                  {$_("preferences.dataManagement.clearDataDescription")}
+                </p>
               </div>
             </div>
             <button

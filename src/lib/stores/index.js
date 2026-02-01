@@ -79,10 +79,28 @@ export function exportAllData() {
   if (typeof localStorage === "undefined") return null;
 
   const exportData = {
-    version: "1.0",
-    exportedAt: new Date().toISOString(),
+    // Metadata
+    formatVersion: "1.0",
+    appVersion: typeof __APP_VERSION__ !== "undefined" ? __APP_VERSION__ : "unknown",
     appName: "FlowStack",
-    data: {},
+    exportedAt: new Date().toISOString(),
+    platform: navigator.platform || "unknown",
+
+    // All app data
+    data: {
+      tasks: [],
+      users: [],
+      sprints: [],
+      statuses: [],
+      settings: {},
+      tags: [],
+      preferences: {
+        userName: null,
+        themeColor: null,
+        darkMode: null,
+        locale: null,
+      },
+    },
   };
 
   // Export all storage keys
@@ -91,10 +109,21 @@ export function exportAllData() {
     if (value !== null) {
       try {
         // Try to parse JSON data
-        exportData.data[key] = JSON.parse(value);
+        const parsed = JSON.parse(value);
+
+        // Group user preferences separately
+        if (["userName", "themeColor", "darkMode", "locale"].includes(key)) {
+          exportData.data.preferences[key] = parsed;
+        } else {
+          exportData.data[key] = parsed;
+        }
       } catch {
-        // Store raw value for non-JSON data
-        exportData.data[key] = value;
+        // Store raw value for non-JSON data (like strings)
+        if (["userName", "themeColor", "darkMode", "locale"].includes(key)) {
+          exportData.data.preferences[key] = value;
+        } else {
+          exportData.data[key] = value;
+        }
       }
     }
   });
@@ -103,37 +132,62 @@ export function exportAllData() {
 }
 
 /**
- * Download exported data as a JSON file
+ * Download exported data as a JSON file using native save dialog
  */
-export function downloadExportedData() {
+export async function downloadExportedData() {
   const data = exportAllData();
   if (!data) return false;
 
-  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `flowstack-backup-${new Date().toISOString().split("T")[0]}.json`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  try {
+    // Try to use Tauri's native save dialog
+    const { save } = await import("@tauri-apps/plugin-dialog");
+    const { writeTextFile } = await import("@tauri-apps/plugin-fs");
 
-  toastStore.success("Data exported successfully");
-  return true;
+    const defaultFileName = `flowstack-backup-${new Date().toISOString().split("T")[0]}.json`;
+
+    const filePath = await save({
+      defaultPath: defaultFileName,
+      filters: [{ name: "JSON", extensions: ["json"] }],
+      title: "Export FlowStack Data",
+    });
+
+    if (filePath) {
+      await writeTextFile(filePath, JSON.stringify(data, null, 2));
+      toastStore.success("Data exported successfully");
+      return true;
+    } else {
+      // User cancelled
+      return false;
+    }
+  } catch (error) {
+    console.warn("Native dialog not available, using browser fallback:", error);
+
+    // Fallback to browser download
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `flowstack-backup-${new Date().toISOString().split("T")[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    toastStore.success("Data exported successfully");
+    return true;
+  }
 }
 
 /**
- * Import data from a JSON file
- * @param {File} file - The JSON file to import
- * @returns {Promise<boolean>} - Whether import was successful
+ * Import data from JSON content
+ * @param {string} jsonText - The JSON text to import
+ * @returns {boolean} - Whether import was successful
  */
-export async function importDataFromFile(file) {
+function processImportData(jsonText) {
   if (typeof localStorage === "undefined") return false;
 
   try {
-    const text = await file.text();
-    const importData = JSON.parse(text);
+    const importData = JSON.parse(jsonText);
 
     // Validate import data structure
     if (!importData.data || typeof importData.data !== "object") {
@@ -141,8 +195,21 @@ export async function importDataFromFile(file) {
       return false;
     }
 
-    // Import each key
+    // Import main data keys
     Object.entries(importData.data).forEach(([key, value]) => {
+      // Handle nested preferences object (new format)
+      if (key === "preferences" && typeof value === "object") {
+        Object.entries(value).forEach(([prefKey, prefValue]) => {
+          const storageKey = STORAGE_KEYS[prefKey];
+          if (storageKey && prefValue !== null) {
+            const stringValue = typeof prefValue === "string" ? prefValue : JSON.stringify(prefValue);
+            localStorage.setItem(storageKey, stringValue);
+          }
+        });
+        return;
+      }
+
+      // Handle regular keys
       const storageKey = STORAGE_KEYS[key];
       if (storageKey) {
         const stringValue = typeof value === "string" ? value : JSON.stringify(value);
@@ -161,6 +228,52 @@ export async function importDataFromFile(file) {
   } catch (error) {
     console.error("Import failed:", error);
     toastStore.error("Failed to import data. Check file format.");
+    return false;
+  }
+}
+
+/**
+ * Import data from a File object (used by file input fallback)
+ * @param {File} file - The JSON file to import
+ * @returns {Promise<boolean>} - Whether import was successful
+ */
+export async function importDataFromFile(file) {
+  try {
+    const text = await file.text();
+    return processImportData(text);
+  } catch (error) {
+    console.error("Import failed:", error);
+    toastStore.error("Failed to import data. Check file format.");
+    return false;
+  }
+}
+
+/**
+ * Import data using native file open dialog
+ * @returns {Promise<boolean>} - Whether import was successful
+ */
+export async function importDataWithDialog() {
+  try {
+    // Try to use Tauri's native open dialog
+    const { open } = await import("@tauri-apps/plugin-dialog");
+    const { readTextFile } = await import("@tauri-apps/plugin-fs");
+
+    const filePath = await open({
+      multiple: false,
+      filters: [{ name: "JSON", extensions: ["json"] }],
+      title: "Import FlowStack Data",
+    });
+
+    if (filePath && typeof filePath === "string") {
+      const text = await readTextFile(filePath);
+      return processImportData(text);
+    } else {
+      // User cancelled
+      return false;
+    }
+  } catch (error) {
+    console.warn("Native dialog not available:", error);
+    toastStore.error("Could not open file dialog");
     return false;
   }
 }
