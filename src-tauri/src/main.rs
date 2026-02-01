@@ -2,5 +2,5 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 fn main() {
-    task_manager_v1_lib::run()
+    flowstack_lib::run()
 }

@@ -1,12 +1,15 @@
 <script>
-  import { Plus, Heading, FileText, Type, Hash, AlertCircle, Target, Tag, User, Activity, Layers3, Clock, CheckCircle2, Eye, ListTodo } from "lucide-svelte";
+  import { Plus, Heading, FileText, Type, Hash, AlertCircle, Target, Tag, User, Activity, Layers3, Clock, CheckCircle2, Eye, ListTodo, Link2, X } from "lucide-svelte";
   import Modal from "../Modal.svelte";
   import Switch from "../Switch.svelte";
   import Select from "../Select.svelte";
   import TagInput from "./TagInput.svelte";
   import SubtaskInput from "./SubtaskInput.svelte";
-  import { taskStore, userStore, statusStore, sprintStore } from "../stores/index.js";
+  import { taskStore, userStore, statusStore, sprintStore, settingsStore } from "../stores/index.js";
   import { marked } from "marked";
+
+  // Get methodology from settings
+  let methodology = $derived(settingsStore.settings.methodology || "agile");
 
   let {
     open = $bindable(false),
@@ -31,14 +34,49 @@
     blocker: "",
     acceptance: "",
     subtasks: [],
+    relatedTasks: [],
   });
 
   let showPreview = $state("write"); // "write", "split", or "preview"
+  let relatedTaskSearch = $state("");
+  let showRelatedDropdown = $state(false);
 
   // Get data from stores
   let users = $derived(userStore.users);
   let statuses = $derived(statusStore.statuses);
   let sprints = $derived(sprintStore.sprints);
+  let allTasks = $derived(taskStore.tasks);
+
+  // Available tasks for related tasks selection (excluding current task)
+  let availableTasks = $derived(
+    allTasks.filter((t) => t.id !== formData.id).map((t) => ({ id: t.id, title: t.title }))
+  );
+
+  // Filtered tasks for related tasks dropdown
+  let filteredRelatedTasks = $derived(
+    availableTasks.filter(
+      (t) =>
+        !formData.relatedTasks.includes(t.id) &&
+        t.title.toLowerCase().includes(relatedTaskSearch.toLowerCase())
+    )
+  );
+
+  function addRelatedTask(taskId) {
+    if (!formData.relatedTasks.includes(taskId)) {
+      formData.relatedTasks = [...formData.relatedTasks, taskId];
+    }
+    relatedTaskSearch = "";
+    showRelatedDropdown = false;
+  }
+
+  function removeRelatedTask(taskId) {
+    formData.relatedTasks = formData.relatedTasks.filter((id) => id !== taskId);
+  }
+
+  function getTaskTitle(taskId) {
+    const task = allTasks.find((t) => t.id === taskId);
+    return task?.title || taskId;
+  }
 
   // Initialize form when modal opens or task changes
   $effect(() => {
@@ -61,6 +99,7 @@
           blocker: task.blocker || "",
           acceptance: task.acceptance || "",
           subtasks: Array.isArray(task.subtasks) ? task.subtasks : [],
+          relatedTasks: Array.isArray(task.relatedTasks) ? task.relatedTasks : [],
         };
       } else {
         // Get active sprint for new tasks
@@ -82,6 +121,7 @@
           blocker: "",
           acceptance: "",
           subtasks: [],
+          relatedTasks: [],
         };
       }
       showPreview = "write"; // Reset preview mode
@@ -115,6 +155,7 @@
       blocker: formData.blocker.trim(),
       acceptance: formData.acceptance.trim(),
       subtasks: Array.isArray(formData.subtasks) ? formData.subtasks : [],
+      relatedTasks: Array.isArray(formData.relatedTasks) ? formData.relatedTasks : [],
     };
 
     if (mode === "edit" && formData.id) {
@@ -373,19 +414,21 @@
       </div>
     </label>
 
-    <label class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-      <div class="flex items-center gap-2 mb-1">
-        <Layers3 size={14} class="text-muted-foreground" />
-        Sprint
-      </div>
-      <div class="mt-2">
-        <Select
-          bind:value={formData.sprintId}
-          options={sprintOptions}
-          placeholder="Backlog"
-        />
-      </div>
-    </label>
+    {#if methodology === "agile"}
+      <label class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <div class="flex items-center gap-2 mb-1">
+          <Layers3 size={14} class="text-muted-foreground" />
+          Sprint
+        </div>
+        <div class="mt-2">
+          <Select
+            bind:value={formData.sprintId}
+            options={sprintOptions}
+            placeholder="Backlog"
+          />
+        </div>
+      </label>
+    {/if}
 
     <label class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
       <div class="flex items-center gap-2 mb-1">
@@ -421,6 +464,67 @@
         <SubtaskInput bind:value={formData.subtasks} />
       </div>
     </label>
+
+    <div class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+      <div class="flex items-center gap-2 mb-1">
+        <Link2 size={14} class="text-muted-foreground" />
+        Related Tasks
+      </div>
+      <div class="mt-2 space-y-2">
+        <!-- Selected related tasks -->
+        {#if formData.relatedTasks.length > 0}
+          <div class="flex flex-wrap gap-2">
+            {#each formData.relatedTasks as taskId (taskId)}
+              <span class="inline-flex items-center gap-1.5 rounded-lg border border-border bg-muted px-2.5 py-1.5 text-xs font-medium text-foreground">
+                <Link2 size={10} />
+                <span class="max-w-[200px] truncate">{getTaskTitle(taskId)}</span>
+                <button
+                  type="button"
+                  class="ml-1 rounded p-0.5 text-muted-foreground hover:bg-background hover:text-foreground transition-colors"
+                  onclick={() => removeRelatedTask(taskId)}
+                >
+                  <X size={12} />
+                </button>
+              </span>
+            {/each}
+          </div>
+        {/if}
+
+        <!-- Search input -->
+        <div class="relative">
+          <input
+            type="text"
+            class="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/20"
+            placeholder="Search tasks to link..."
+            bind:value={relatedTaskSearch}
+            onfocus={() => (showRelatedDropdown = true)}
+            onblur={() => setTimeout(() => (showRelatedDropdown = false), 200)}
+          />
+
+          <!-- Dropdown -->
+          {#if showRelatedDropdown && (relatedTaskSearch || filteredRelatedTasks.length > 0)}
+            <div class="absolute z-20 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-border bg-card shadow-lg">
+              {#if filteredRelatedTasks.length === 0}
+                <div class="px-3 py-2 text-sm text-muted-foreground">
+                  {relatedTaskSearch ? "No matching tasks found" : "No more tasks available"}
+                </div>
+              {:else}
+                {#each filteredRelatedTasks.slice(0, 10) as task (task.id)}
+                  <button
+                    type="button"
+                    class="w-full px-3 py-2 text-left text-sm hover:bg-muted/50 transition-colors flex items-center gap-2"
+                    onmousedown={() => addRelatedTask(task.id)}
+                  >
+                    <Link2 size={12} class="text-muted-foreground flex-shrink-0" />
+                    <span class="truncate text-foreground">{task.title}</span>
+                  </button>
+                {/each}
+              {/if}
+            </div>
+          {/if}
+        </div>
+      </div>
+    </div>
 
     <Switch bind:checked={formData.blocked} label="Status: Blocked" />
 

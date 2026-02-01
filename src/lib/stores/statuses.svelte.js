@@ -21,6 +21,7 @@ const DEFAULT_STATUSES = [
     color: DEFAULT_STATUS_COLORS[0],
     show: true,
     order: 0,
+    isSystem: true, // Protected status for backlog workflow
     created: new Date().toISOString(),
     updated: new Date().toISOString(),
   },
@@ -57,6 +58,7 @@ const DEFAULT_STATUSES = [
     color: DEFAULT_STATUS_COLORS[4],
     show: true,
     order: 4,
+    isSystem: true, // Protected status for reports
     created: new Date().toISOString(),
     updated: new Date().toISOString(),
   },
@@ -122,6 +124,58 @@ export const statusStore = {
     }
   },
 
+  // Ensure system statuses (BACKLOG, DONE) always exist and are protected
+  ensureSystemStatuses() {
+    const systemStatuses = [
+      { id: "BACKLOG", status: "BACKLOG", color: "#94a3b8", defaultOrder: 0 },
+      { id: "DONE", status: "DONE", color: "#10b981", defaultOrder: 999 },
+    ];
+
+    let needsSave = false;
+    const now = new Date().toISOString();
+
+    systemStatuses.forEach(({ id, status, color, defaultOrder }) => {
+      const exists = statuses.some((s) => s.id === id || s.status === status);
+
+      if (!exists) {
+        // Add missing system status
+        const maxOrder = statuses.reduce((max, s) => Math.max(max, s.order ?? 0), -1);
+        statuses = [
+          ...statuses,
+          {
+            id,
+            status,
+            color,
+            show: true,
+            order: defaultOrder === 0 ? 0 : maxOrder + 1,
+            isSystem: true,
+            created: now,
+            updated: now,
+          },
+        ];
+        needsSave = true;
+      } else {
+        // Mark existing as system (protected) if not already
+        const needsProtection = statuses.some((s) => (s.id === id || s.status === status) && !s.isSystem);
+        if (needsProtection) {
+          statuses = statuses.map((s) =>
+            s.id === id || s.status === status ? { ...s, isSystem: true } : s
+          );
+          needsSave = true;
+        }
+      }
+    });
+
+    if (needsSave) {
+      saveStatuses();
+    }
+  },
+
+  // Alias for backward compatibility
+  ensureDoneStatus() {
+    this.ensureSystemStatuses();
+  },
+
   create(statusData) {
     const now = new Date().toISOString();
     const maxOrder = statuses.reduce((max, s) => Math.max(max, s.order ?? 0), -1);
@@ -150,6 +204,11 @@ export const statusStore = {
   },
 
   delete(id) {
+    const status = this.getById(id);
+    if (status?.isSystem) {
+      toastStore.warning("Cannot delete system status");
+      return;
+    }
     statuses = statuses.filter((status) => status.id !== id);
     saveStatuses();
     toastStore.success("Status deleted");

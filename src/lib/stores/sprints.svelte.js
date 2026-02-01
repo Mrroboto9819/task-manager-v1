@@ -3,6 +3,8 @@
  */
 
 import { toastStore } from "../toastStore.svelte.js";
+import { taskStore } from "./tasks.svelte.js";
+import { settingsStore } from "./settings.svelte.js";
 
 const STORAGE_KEY = "taskflow_sprints";
 
@@ -85,6 +87,22 @@ export const sprintStore = {
 
   complete(id) {
     const now = new Date().toISOString();
+
+    // Get all tasks for this sprint and move incomplete ones to backlog
+    const sprintTasks = taskStore.getBySprint(id);
+    const incompleteTasks = sprintTasks.filter((t) => t.status !== "DONE");
+
+    // Move incomplete tasks to backlog (remove from sprint, set status to BACKLOG)
+    incompleteTasks.forEach((task) => {
+      taskStore.update(task.id, { sprintId: null, status: "BACKLOG" });
+    });
+
+    // Notify user about moved tasks
+    if (incompleteTasks.length > 0) {
+      toastStore.info(`${incompleteTasks.length} incomplete task(s) moved to backlog`);
+    }
+
+    // Complete the sprint
     sprints = sprints.map((sprint) =>
       sprint.id === id ? { ...sprint, status: "closed", updated: now } : sprint
     );
@@ -109,5 +127,17 @@ export const sprintStore = {
   clear() {
     sprints = [];
     saveSprints();
+  },
+
+  // Check if active sprint should be auto-finished based on end date
+  checkAutoFinish() {
+    if (!settingsStore.settings.autoFinishSprints) return;
+
+    const today = new Date().toISOString().split("T")[0];
+    const activeSprint = this.getActive();
+
+    if (activeSprint && activeSprint.end && activeSprint.end < today) {
+      this.complete(activeSprint.id);
+    }
   },
 };

@@ -14,20 +14,31 @@
     ChevronDown,
     LogIn,
     SlidersHorizontal,
+    BarChart3,
   } from "lucide-svelte";
   import { page } from "$app/stores";
   import { goto } from "$app/navigation";
-  import { currentUserStore } from "../stores/index.js";
+  import { currentUserStore, settingsStore } from "../stores/index.js";
   import { _ } from "$lib/i18n";
 
-  const navItems = [
-    { href: "/sprint", labelKey: "nav.sprint", icon: KanbanSquare },
-    { href: "/tasks", labelKey: "nav.tasks", icon: Clipboard },
-    { href: "/backlog", labelKey: "nav.backlog", icon: Layers3 },
-    { href: "/sprints", labelKey: "nav.sprints", icon: Calendar },
-    { href: "/team", labelKey: "nav.team", icon: Users },
-    { href: "/settings", labelKey: "nav.boardSettings", icon: Settings },
+  // Get methodology from settings
+  let methodology = $derived(settingsStore.settings.methodology || "agile");
+
+  // Define all nav items with methodology visibility
+  const allNavItems = [
+    { href: "/sprint", labelKey: "nav.sprint", icon: KanbanSquare, methodologies: ["agile"] },
+    { href: "/tasks", labelKey: "nav.tasks", icon: Clipboard, methodologies: ["agile", "kanban", "waterfall"] },
+    { href: "/backlog", labelKey: "nav.backlog", icon: Layers3, methodologies: ["agile", "kanban"] },
+    { href: "/sprints", labelKey: "nav.sprints", icon: Calendar, methodologies: ["agile"] },
+    { href: "/team", labelKey: "nav.team", icon: Users, methodologies: ["agile", "kanban", "waterfall"] },
+    { href: "/reports", labelKey: "nav.reports", icon: BarChart3, methodologies: ["agile", "kanban", "waterfall"] },
+    { href: "/settings", labelKey: "nav.boardSettings", icon: Settings, methodologies: ["agile", "kanban", "waterfall"] },
   ];
+
+  // Filter nav items based on current methodology
+  let navItems = $derived(
+    allNavItems.filter((item) => item.methodologies.includes(methodology))
+  );
 
   let { isCollapsed = $bindable(false), contentElement = undefined } = $props();
   let sidebarElement: HTMLElement | undefined;

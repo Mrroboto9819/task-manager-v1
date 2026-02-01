@@ -140,11 +140,16 @@
 <main class="min-h-screen px-6 pt-6 pb-10">
   <!-- Header -->
   <header class="mb-6 flex items-center justify-between">
-    <div>
-      <h1 class="text-3xl font-bold text-foreground">{$_("sprints.title")}</h1>
-      <p class="text-muted-foreground mt-1">
-        {$_("sprints.description")}
-      </p>
+    <div class="flex items-center gap-3">
+      <div class="rounded-xl bg-primary/10 border border-primary/30 p-2.5">
+        <Calendar size={24} class="text-primary" />
+      </div>
+      <div>
+        <h1 class="text-3xl font-bold text-foreground">{$_("sprints.title")}</h1>
+        <p class="text-muted-foreground mt-1">
+          {$_("sprints.description")}
+        </p>
+      </div>
     </div>
     <button
       type="button"

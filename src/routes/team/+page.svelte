@@ -8,6 +8,7 @@
     Users2,
     UserCheck,
     User,
+    Users,
   } from "lucide-svelte";
   import { userStore, taskStore } from "../../lib/stores/index.js";
   import UserModal from "../../lib/components/UserModal.svelte";
@@ -141,11 +142,16 @@
 <main class="min-h-screen px-6 pt-6 pb-10">
   <!-- Header -->
   <header class="mb-6 flex items-center justify-between">
-    <div>
-      <h1 class="text-3xl font-bold text-foreground">{$_("team.title")}</h1>
-      <p class="text-muted-foreground mt-1">
-        {$_("team.description")}
-      </p>
+    <div class="flex items-center gap-3">
+      <div class="rounded-xl bg-primary/10 border border-primary/30 p-2.5">
+        <Users size={24} class="text-primary" />
+      </div>
+      <div>
+        <h1 class="text-3xl font-bold text-foreground">{$_("team.title")}</h1>
+        <p class="text-muted-foreground mt-1">
+          {$_("team.description")}
+        </p>
+      </div>
     </div>
     <button
       type="button"

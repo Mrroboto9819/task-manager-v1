@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "task-manager-v1",
+  "productName": "FlowStack",
   "version": "3.7.1",
-  "identifier": "com.desktop-928391212345.task-manager-v1",
+  "identifier": "com.flowstack.app",
   "build": {
     "beforeDevCommand": "bun run dev",
     "devUrl": "http://localhost:1420",
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "task-manager-v1",
+        "title": "FlowStack",
         "width": 800,
         "height": 600,
         "decorations": false

@@ -167,6 +167,59 @@
     @apply bg-destructive text-destructive-foreground;
   }
 
+  /* Mac Traffic Light Controls */
+  .titlebar__mac-controls {
+    @apply flex items-center gap-2 mr-3;
+  }
+
+  .titlebar__traffic-light {
+    @apply w-3 h-3 rounded-full flex items-center justify-center transition-all duration-150 border-none cursor-pointer;
+  }
+
+  .titlebar__traffic-light-icon {
+    @apply opacity-0 transition-opacity duration-150;
+  }
+
+  .titlebar__mac-controls:hover .titlebar__traffic-light-icon {
+    @apply opacity-100;
+  }
+
+  .titlebar__traffic-light--close {
+    @apply bg-[#ff5f57];
+  }
+
+  .titlebar__traffic-light--close:hover {
+    @apply bg-[#ff5f57]/80;
+  }
+
+  .titlebar__traffic-light--close .titlebar__traffic-light-icon {
+    @apply text-[#4c0002];
+  }
+
+  .titlebar__traffic-light--minimize {
+    @apply bg-[#febc2e];
+  }
+
+  .titlebar__traffic-light--minimize:hover {
+    @apply bg-[#febc2e]/80;
+  }
+
+  .titlebar__traffic-light--minimize .titlebar__traffic-light-icon {
+    @apply text-[#985600];
+  }
+
+  .titlebar__traffic-light--maximize {
+    @apply bg-[#28c840];
+  }
+
+  .titlebar__traffic-light--maximize:hover {
+    @apply bg-[#28c840]/80;
+  }
+
+  .titlebar__traffic-light--maximize .titlebar__traffic-light-icon {
+    @apply text-[#006500];
+  }
+
   .app-body {
     display: flex;
     flex-direction: column;

@@ -10,6 +10,7 @@
     Eye,
     EyeOff,
     GripVertical,
+    Lock,
   } from "lucide-svelte";
   import { dndzone } from "svelte-dnd-action";
   import { flip } from "svelte/animate";
@@ -258,8 +259,11 @@
                     style="background-color: {status.color}; ring-color: {status.color}40"
                   ></div>
                   <div class="flex-1 min-w-0">
-                    <h3 class="text-base font-bold text-foreground">
+                    <h3 class="text-base font-bold text-foreground flex items-center gap-2">
                       {status.status}
+                      {#if status.isSystem}
+                        <Lock size={14} class="text-muted-foreground" title={$_("settings.statuses.systemStatus")} />
+                      {/if}
                     </h3>
                     <p class="text-xs text-muted-foreground mt-0.5">
                       {$_("settings.statuses.created")} {new Date(status.created).toLocaleDateString()}
@@ -298,14 +302,16 @@
                     >
                       <Pencil size={14} />
                     </button>
-                    <button
-                      type="button"
-                      class="btn btn-ghost px-2 py-1 text-[10px] text-rose-500 hover:bg-rose-500 hover:text-white"
-                      onclick={() => confirmDeleteStatus(status)}
-                      title="Delete"
-                    >
-                      <Trash2 size={14} />
-                    </button>
+                    {#if !status.isSystem}
+                      <button
+                        type="button"
+                        class="btn btn-ghost px-2 py-1 text-[10px] text-rose-500 hover:bg-rose-500 hover:text-white"
+                        onclick={() => confirmDeleteStatus(status)}
+                        title="Delete"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    {/if}
                   </div>
                 </div>
               </article>

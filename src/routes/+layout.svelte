@@ -7,7 +7,7 @@
   import UpdateScreen from "../lib/UpdateScreen.svelte";
   import ConfirmModal from "../lib/components/ConfirmModal.svelte";
   import LanguageSelector from "../lib/components/LanguageSelector.svelte";
-  import { hydrateAllStores, clearAllStores } from "../lib/stores/index.js";
+  import { hydrateAllStores, clearAllStores, sprintStore } from "../lib/stores/index.js";
   import { _ } from "$lib/i18n";
 
   let { children } = $props();
@@ -15,6 +15,7 @@
   let appWindow: any = $state(null);
   let darkMode = $state(true);
   let mounted = $state(false);
+  let isMac = $state(false);
   let sidebarCollapsed = $state(false);
   let contentElement: HTMLElement | undefined = $state();
 
@@ -33,8 +34,14 @@
   onMount(async () => {
     mounted = true;
 
+    // Detect platform (macOS vs Windows/Linux)
+    isMac = navigator.platform.toLowerCase().includes('mac');
+
     // Initialize all stores
     hydrateAllStores();
+
+    // Check if active sprint should be auto-finished based on end date
+    sprintStore.checkAutoFinish();
 
     // Try to get Tauri window (will fail gracefully in browser)
     try {
@@ -64,6 +71,12 @@
       if (e.ctrlKey && e.shiftKey && e.key === "U") {
         e.preventDefault();
         testUpdateScreen();
+      }
+      // Ctrl+Shift+M - Toggle Mac/Windows controls
+      if (e.ctrlKey && e.shiftKey && e.key === "M") {
+        e.preventDefault();
+        isMac = !isMac;
+        console.log(`Window controls: ${isMac ? 'macOS' : 'Windows'} style`);
       }
       // Ctrl+Shift+R - Reset all data (dev only)
       if (import.meta.env.DEV && e.ctrlKey && e.shiftKey && e.key === "R") {
@@ -237,9 +250,39 @@
 <div class="app-shell">
   <!-- Custom Titlebar -->
   <header class="titlebar" data-tauri-drag-region>
+    <!-- Mac Traffic Light Controls (left side) -->
+    {#if appWindow && isMac}
+      <div class="titlebar__mac-controls" data-tauri-drag-region="false">
+        <button
+          class="titlebar__traffic-light titlebar__traffic-light--close"
+          type="button"
+          onclick={close}
+          title={$_("titlebar.close")}
+        >
+          <X size={8} class="titlebar__traffic-light-icon" />
+        </button>
+        <button
+          class="titlebar__traffic-light titlebar__traffic-light--minimize"
+          type="button"
+          onclick={minimize}
+          title={$_("titlebar.minimize")}
+        >
+          <Minus size={8} class="titlebar__traffic-light-icon" />
+        </button>
+        <button
+          class="titlebar__traffic-light titlebar__traffic-light--maximize"
+          type="button"
+          onclick={toggleMaximize}
+          title={$_("titlebar.maximize")}
+        >
+          <Square size={6} class="titlebar__traffic-light-icon" />
+        </button>
+      </div>
+    {/if}
+
     <div class="titlebar__brand" data-tauri-drag-region>
       <div class="titlebar__dot"></div>
-      <span class="tracking-wide" data-tauri-drag-region>TaskFlow</span>
+      <span class="tracking-wide" data-tauri-drag-region>FlowStack</span>
     </div>
     <div class="titlebar__actions" data-tauri-drag-region="false">
       <LanguageSelector />
@@ -255,7 +298,8 @@
           <Moon size={14} />
         {/if}
       </button>
-      {#if appWindow}
+      <!-- Windows/Linux Controls (right side) -->
+      {#if appWindow && !isMac}
         <button class="titlebar__btn" type="button" onclick={minimize}>
           <Minus size={14} />
         </button>

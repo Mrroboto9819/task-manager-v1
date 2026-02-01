@@ -1,5 +1,5 @@
 <script>
-  import { Plus, Pencil, Target, TrendingUp, Eye } from "lucide-svelte";
+  import { Plus, Pencil, Target, TrendingUp, Eye, Layers3 } from "lucide-svelte";
   import { taskStore, sprintStore } from "../../lib/stores/index.js";
   import TaskModal from "../../lib/components/TaskModal.svelte";
   import TaskDetailModal from "../../lib/components/TaskDetailModal.svelte";
@@ -77,8 +77,15 @@
 <main class="min-h-screen px-6 pt-6 pb-10">
   <!-- Header with Title & Description -->
   <header class="mb-6">
-    <h1 class="text-3xl font-bold text-foreground">{$_("backlog.title")}</h1>
-    <p class="text-muted-foreground mt-1">{$_("backlog.description")}</p>
+    <div class="flex items-center gap-3">
+      <div class="rounded-xl bg-primary/10 border border-primary/30 p-2.5">
+        <Layers3 size={24} class="text-primary" />
+      </div>
+      <div>
+        <h1 class="text-3xl font-bold text-foreground">{$_("backlog.title")}</h1>
+        <p class="text-muted-foreground mt-1">{$_("backlog.description")}</p>
+      </div>
+    </div>
   </header>
 
   <div class="space-y-6">

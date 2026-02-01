@@ -7,6 +7,8 @@ const STORAGE_KEY = "taskflow_settings";
 let settings = $state({
   theme: "dark",
   showScrollButtons: true,
+  autoFinishSprints: false, // When true, sprints auto-complete when end date passes
+  methodology: "agile", // "agile" | "kanban" | "waterfall"
 });
 
 function saveSettings() {
@@ -58,7 +60,14 @@ export const settingsStore = {
     settings = {
       theme: "dark",
       showScrollButtons: true,
+      autoFinishSprints: false,
+      methodology: "agile",
     };
+    saveSettings();
+  },
+
+  setMethodology(methodology) {
+    settings.methodology = methodology;
     saveSettings();
   },
 };

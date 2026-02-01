@@ -18,7 +18,7 @@
     Eye,
     ListTodo,
   } from "lucide-svelte";
-  import { taskStore, userStore, statusStore, settingsStore } from "../../lib/stores/index.js";
+  import { taskStore, userStore, statusStore, settingsStore, sprintStore } from "../../lib/stores/index.js";
   import TaskModal from "../../lib/components/TaskModal.svelte";
   import TaskDetailModal from "../../lib/components/TaskDetailModal.svelte";
   import ConfirmModal from "../../lib/components/ConfirmModal.svelte";
@@ -30,16 +30,26 @@
   import { marked } from "marked";
   import { toastStore } from "../../lib/toastStore.svelte.js";
   import { _ } from "$lib/i18n";
+  import { formatBoardSummaryForClipboard, copyToClipboard } from "../../lib/utils/clipboard.js";
 
   let allTasks = $derived(taskStore.tasks);
   let users = $derived(userStore.users);
   let visibleStatuses = $derived(statusStore.visible);
   let settings = $derived(settingsStore.settings);
+  let methodology = $derived(settingsStore.settings.methodology || "agile");
 
   // Status filter options for Select component
   let statusFilterOptions = $derived([
-    { value: "all", label: "All" },
+    { value: "all", label: $_("common.all") },
     ...visibleStatuses.map((s) => ({ value: s.status, label: s.status })),
+  ]);
+
+  // Sprint filter options for Select component
+  let sprints = $derived(sprintStore.sprints);
+  let sprintFilterOptions = $derived([
+    { value: "all", label: $_("common.all") },
+    { value: "backlog", label: $_("tasks.backlog") },
+    ...sprints.map((s) => ({ value: s.id, label: s.name || `Sprint ${s.id.slice(0, 4)}` })),
   ]);
 
   const flipDurationMs = 200;
@@ -59,6 +69,7 @@
 
   // Filter state
   let filterStatus = $state("all");
+  let filterSprint = $state("all");
   let filterTag = $state("");
   let filterFrom = $state("");
   let filterTo = $state("");
@@ -94,6 +105,12 @@
     return filterStatus === "all" ? true : task.status === filterStatus;
   }
 
+  function matchesSprint(task) {
+    if (filterSprint === "all") return true;
+    if (filterSprint === "backlog") return !task.sprintId;
+    return task.sprintId === filterSprint;
+  }
+
   function matchesTag(task) {
     if (!filterTag.trim()) return true;
     const needle = filterTag.trim().toLowerCase();
@@ -117,7 +134,7 @@
 
   // Get filtered tasks
   let filteredTasks = $derived(
-    allTasks.filter((task) => matchesStatus(task) && matchesTag(task) && matchesDate(task))
+    allTasks.filter((task) => matchesStatus(task) && matchesSprint(task) && matchesTag(task) && matchesDate(task))
   );
 
   // Get tasks for status
@@ -167,6 +184,7 @@
   // Clear filters
   function clearFilters() {
     filterStatus = "all";
+    filterSprint = "all";
     filterTag = "";
     filterFrom = "";
     filterTo = "";
@@ -174,36 +192,13 @@
   }
 
   // Copy summary
-  function copyTagsSummary() {
-    const lines = [];
-    visibleStatuses.forEach((statusItem) => {
-      const list = getTasksForStatus(statusItem.status);
-      lines.push(`${statusItem.status}:`);
-      if (list.length === 0) {
-        lines.push(`- ${$_("tasks.noTasksInStatus")}`);
-      } else {
-        list.forEach((task) => {
-          const detail = task.description ? `: ${task.description}` : "";
-          lines.push(`- ${task.title}${detail}`);
-        });
-      }
-      lines.push("");
-    });
-    const text = lines.join("\n").trim();
-    if (navigator.clipboard?.writeText) {
-      navigator.clipboard.writeText(text);
+  async function copyTagsSummary() {
+    const sprints = sprintStore.sprints;
+    const text = formatBoardSummaryForClipboard(filteredTasks, visibleStatuses, { sprints });
+    const success = await copyToClipboard(text);
+    if (success) {
       toastStore.success($_("tasks.summaryCopied"));
-      return;
     }
-    const textarea = document.createElement("textarea");
-    textarea.value = text;
-    textarea.style.position = "fixed";
-    textarea.style.opacity = "0";
-    document.body.appendChild(textarea);
-    textarea.select();
-    document.execCommand("copy");
-    textarea.remove();
-    toastStore.success($_("tasks.summaryCopied"));
   }
 
   // Drag and drop handlers
@@ -235,8 +230,15 @@
 <main class="min-h-screen px-6 pt-6 pb-10">
   <!-- Header with Title & Description -->
   <header class="mb-6">
-    <h1 class="text-3xl font-bold text-foreground">{$_("tasks.title")}</h1>
-    <p class="text-muted-foreground mt-1">{$_("tasks.description")}</p>
+    <div class="flex items-center gap-3">
+      <div class="rounded-xl bg-primary/10 border border-primary/30 p-2.5">
+        <Clipboard size={24} class="text-primary" />
+      </div>
+      <div>
+        <h1 class="text-3xl font-bold text-foreground">{$_("tasks.title")}</h1>
+        <p class="text-muted-foreground mt-1">{$_("tasks.description")}</p>
+      </div>
+    </div>
   </header>
 
   <div class="space-y-6">
@@ -275,7 +277,7 @@
       </div>
 
       <!-- Filters -->
-      <div class="grid gap-3 md:grid-cols-4 mb-6">
+      <div class="grid gap-3 mb-6 {methodology === 'agile' ? 'md:grid-cols-5' : 'md:grid-cols-4'}">
         <label class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           {$_("tasks.filterStatus")}
           <div class="mt-2">
@@ -286,6 +288,18 @@
             />
           </div>
         </label>
+        {#if methodology === "agile"}
+          <label class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            {$_("tasks.filterSprint")}
+            <div class="mt-2">
+              <Select
+                bind:value={filterSprint}
+                options={sprintFilterOptions}
+                placeholder={$_("tasks.selectSprint")}
+              />
+            </div>
+          </label>
+        {/if}
         <label class="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
           {$_("tasks.filterTag")}
           <input

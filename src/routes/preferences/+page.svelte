@@ -8,16 +8,31 @@
     User,
     AlertTriangle,
     Globe,
+    CalendarCheck,
+    Workflow,
+    Download,
+    Upload,
+    Database,
   } from "lucide-svelte";
   import { onMount } from "svelte";
   import ConfirmModal from "../../lib/components/ConfirmModal.svelte";
-  import { currentUserStore, themeStore } from "../../lib/stores/index.js";
+  import { currentUserStore, themeStore, settingsStore, downloadExportedData, importDataFromFile } from "../../lib/stores/index.js";
   import { _, locale, supportedLocales, setLocale } from "$lib/i18n";
 
   let darkMode = $state(true);
   let userName = $state(currentUserStore.name);
   let themeColor = $state(themeStore.current);
+  let autoFinishSprints = $state(settingsStore.settings.autoFinishSprints);
+  let methodology = $state(settingsStore.settings.methodology || "agile");
   let confirmClearDataOpen = $state(false);
+  let fileInput: HTMLInputElement;
+  let isImporting = $state(false);
+
+  const methodologies = [
+    { id: "agile", labelKey: "preferences.methodology.agile", descKey: "preferences.methodology.agileDesc" },
+    { id: "kanban", labelKey: "preferences.methodology.kanban", descKey: "preferences.methodology.kanbanDesc" },
+    { id: "waterfall", labelKey: "preferences.methodology.waterfall", descKey: "preferences.methodology.waterfallDesc" },
+  ];
 
   const themeColors = [
     { name: "emerald", value: "#10b981", label: "Emerald" },
@@ -38,6 +53,8 @@
     // Sync stores if they changed elsewhere (e.g. initial load)
     userName = currentUserStore.name;
     themeColor = themeStore.current;
+    autoFinishSprints = settingsStore.settings.autoFinishSprints;
+    methodology = settingsStore.settings.methodology || "agile";
   });
 
   function toggleDarkMode() {
@@ -62,8 +79,39 @@
     themeStore.setTheme(themeName);
   }
 
+  function toggleAutoFinishSprints() {
+    autoFinishSprints = !autoFinishSprints;
+    settingsStore.update({ autoFinishSprints });
+  }
+
+  function handleMethodologyChange(newMethodology: string) {
+    methodology = newMethodology;
+    settingsStore.setMethodology(newMethodology);
+  }
+
   function confirmClearData() {
     confirmClearDataOpen = true;
+  }
+
+  function handleExportData() {
+    downloadExportedData();
+  }
+
+  function handleImportClick() {
+    fileInput?.click();
+  }
+
+  async function handleFileSelected(event: Event) {
+    const target = event.target as HTMLInputElement;
+    const file = target.files?.[0];
+    if (!file) return;
+
+    isImporting = true;
+    await importDataFromFile(file);
+    isImporting = false;
+
+    // Reset input for future imports
+    target.value = "";
   }
 
   function handleClearData() {
@@ -225,6 +273,74 @@
       </div>
     </section>
 
+    <!-- Project Methodology Section -->
+    <section class="rounded-2xl border border-border bg-card p-6 shadow-sm">
+      <div class="flex items-center gap-3 mb-4">
+        <Workflow size={20} class="text-primary" />
+        <div>
+          <h2 class="text-lg font-semibold text-foreground">{$_("preferences.methodology.title")}</h2>
+          <p class="text-sm text-muted-foreground">{$_("preferences.methodology.description")}</p>
+        </div>
+      </div>
+
+      <div class="space-y-3">
+        {#each methodologies as m}
+          <button
+            type="button"
+            class="w-full flex items-start gap-4 p-4 rounded-lg border-2 transition-all text-left {methodology === m.id
+              ? 'border-primary bg-primary/5'
+              : 'border-border hover:border-muted-foreground bg-muted/30'}"
+            onclick={() => handleMethodologyChange(m.id)}
+          >
+            <div class="flex-shrink-0 w-5 h-5 mt-0.5 rounded-full border-2 flex items-center justify-center {methodology === m.id ? 'border-primary' : 'border-muted-foreground'}">
+              {#if methodology === m.id}
+                <div class="w-2.5 h-2.5 rounded-full bg-primary"></div>
+              {/if}
+            </div>
+            <div class="flex-1">
+              <p class="text-sm font-semibold text-foreground">{$_(m.labelKey)}</p>
+              <p class="text-xs text-muted-foreground mt-1">{$_(m.descKey)}</p>
+            </div>
+          </button>
+        {/each}
+      </div>
+    </section>
+
+    <!-- Sprint Settings Section (only for Agile) -->
+    {#if methodology === "agile"}
+      <section class="rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <div class="flex items-center gap-3 mb-4">
+          <CalendarCheck size={20} class="text-primary" />
+          <h2 class="text-lg font-semibold text-foreground">{$_("preferences.sprintSettings.title")}</h2>
+        </div>
+
+        <div class="p-4 rounded-lg bg-muted/30">
+          <div class="flex items-center justify-between">
+            <div class="flex-1">
+              <p class="text-sm font-semibold text-foreground">{$_("preferences.sprintSettings.autoFinish")}</p>
+              <p class="text-xs text-muted-foreground mt-1">
+                {$_("preferences.sprintSettings.autoFinishDescription")}
+              </p>
+            </div>
+            <button
+              type="button"
+              aria-label="Toggle auto-finish sprints"
+              class="relative inline-flex h-6 w-11 items-center rounded-full transition-colors {autoFinishSprints
+                ? 'bg-primary'
+                : 'bg-muted'}"
+              onclick={toggleAutoFinishSprints}
+            >
+              <span
+                class="inline-block h-4 w-4 transform rounded-full bg-white transition-transform {autoFinishSprints
+                  ? 'translate-x-6'
+                  : 'translate-x-1'}"
+              ></span>
+            </button>
+          </div>
+        </div>
+      </section>
+    {/if}
+
     <!-- App Information -->
     <section class="rounded-2xl border border-border bg-card p-6 shadow-sm">
       <h2 class="text-lg font-semibold text-foreground mb-4">{$_("preferences.about.title")}</h2>
@@ -243,19 +359,66 @@
     </section>
 
     <!-- Data Management Section -->
-    <section class="rounded-xl border border-border/50 bg-card/50 p-4">
-      <div class="flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <Trash2 size={14} class="text-muted-foreground" />
-          <span class="text-sm text-muted-foreground">{$_("preferences.dataManagement.title")}</span>
+    <section class="rounded-2xl border border-border bg-card p-6 shadow-sm">
+      <div class="flex items-center gap-3 mb-4">
+        <Database size={20} class="text-primary" />
+        <h2 class="text-lg font-semibold text-foreground">{$_("preferences.dataManagement.title")}</h2>
+      </div>
+
+      <div class="space-y-3">
+        <!-- Export/Import -->
+        <div class="p-4 rounded-lg bg-muted/30">
+          <p class="text-sm font-semibold text-foreground mb-2">{$_("preferences.dataManagement.backupRestore")}</p>
+          <p class="text-xs text-muted-foreground mb-3">
+            {$_("preferences.dataManagement.backupDescription")}
+          </p>
+          <div class="flex gap-3">
+            <button
+              type="button"
+              class="flex items-center gap-2 px-4 py-2 rounded-lg bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors"
+              onclick={handleExportData}
+            >
+              <Download size={16} />
+              {$_("preferences.dataManagement.export")}
+            </button>
+            <button
+              type="button"
+              class="flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-background text-foreground text-sm font-medium hover:bg-muted transition-colors"
+              onclick={handleImportClick}
+              disabled={isImporting}
+            >
+              <Upload size={16} />
+              {isImporting ? $_("common.loading") : $_("preferences.dataManagement.import")}
+            </button>
+            <input
+              type="file"
+              accept=".json"
+              class="hidden"
+              bind:this={fileInput}
+              onchange={handleFileSelected}
+            />
+          </div>
         </div>
-        <button
-          type="button"
-          class="text-xs text-rose-500 hover:text-rose-600 hover:underline transition-colors"
-          onclick={confirmClearData}
-        >
-          {$_("preferences.dataManagement.clearData")}
-        </button>
+
+        <!-- Clear Data -->
+        <div class="p-4 rounded-lg bg-rose-500/5 border border-rose-500/20">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+              <Trash2 size={16} class="text-rose-500" />
+              <div>
+                <p class="text-sm font-semibold text-foreground">{$_("preferences.dataManagement.clearData")}</p>
+                <p class="text-xs text-muted-foreground">{$_("preferences.dataManagement.clearDataDescription")}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              class="px-3 py-1.5 rounded-lg bg-rose-500 text-white text-xs font-medium hover:bg-rose-600 transition-colors"
+              onclick={confirmClearData}
+            >
+              {$_("preferences.dataManagement.clearData")}
+            </button>
+          </div>
+        </div>
       </div>
     </section>
   </div>

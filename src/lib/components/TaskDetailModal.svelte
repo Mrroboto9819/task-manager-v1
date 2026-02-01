@@ -1,8 +1,14 @@
 <script>
-  import { X, Pencil, Trash2, Calendar, User, Target, Tag, Clock, Hash, AlertCircle, Activity, Layers3, CheckCircle2, AlertTriangle, ListTodo, Check } from "lucide-svelte";
+  import { X, Pencil, Trash2, Calendar, User, Target, Tag, Clock, Hash, AlertCircle, Activity, Layers3, CheckCircle2, AlertTriangle, ListTodo, Check, Link2, Copy } from "lucide-svelte";
   import { marked } from "marked";
-  import { sprintStore, taskStore } from "../stores/index.js";
+  import { sprintStore, taskStore, settingsStore } from "../stores/index.js";
+  import { toastStore } from "../toastStore.svelte.js";
+  import { formatTaskForClipboard, copyToClipboard } from "../utils/clipboard.js";
+  import { _ } from "$lib/i18n";
   import TaskTimer from "./TaskTimer.svelte";
+
+  // Get methodology from settings
+  let methodology = $derived(settingsStore.settings.methodology || "agile");
 
   let {
     open = $bindable(false),
@@ -12,6 +18,16 @@
   } = $props();
 
   let sprints = $derived(sprintStore.sprints);
+  let allTasks = $derived(taskStore.tasks);
+
+  // Get related tasks details
+  let relatedTasksDetails = $derived(
+    task?.relatedTasks && Array.isArray(task.relatedTasks)
+      ? task.relatedTasks
+          .map((id) => allTasks.find((t) => t.id === id))
+          .filter(Boolean)
+      : []
+  );
 
   function handleClose() {
     open = false;
@@ -25,6 +41,15 @@
   function handleDelete() {
     onDelete(task);
     open = false;
+  }
+
+  async function handleCopy() {
+    if (!task) return;
+    const text = formatTaskForClipboard(task, { allTasks, sprints });
+    const success = await copyToClipboard(text);
+    if (success) {
+      toastStore.success($_("tasks.taskCopied"));
+    }
   }
 
   const priorityColors = {
@@ -85,6 +110,15 @@
           </h2>
         </div>
         <div class="flex items-center gap-2">
+          <button
+            type="button"
+            class="btn btn-ghost px-3 py-2 text-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+            onclick={handleCopy}
+            title={$_("tasks.copyTask")}
+          >
+            <Copy size={14} />
+            {$_("tasks.copyTask")}
+          </button>
           <button
             type="button"
             class="btn btn-secondary px-3 py-2 text-sm"
@@ -284,8 +318,8 @@
               </div>
             {/if}
 
-            <!-- Sprint -->
-            {#if task.sprintId}
+            <!-- Sprint (Agile only) -->
+            {#if methodology === "agile" && task.sprintId}
               {@const sprint = sprints.find(s => s.id === task.sprintId)}
               <div class="space-y-1">
                 <div class="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
@@ -333,6 +367,34 @@
                   <span class="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-foreground">
                     {tag}
                   </span>
+                {/each}
+              </div>
+            </div>
+          {/if}
+
+          <!-- Related Tasks -->
+          {#if relatedTasksDetails.length > 0}
+            <div class="space-y-2">
+              <h3 class="text-xs font-semibold uppercase tracking-wide text-muted-foreground flex items-center gap-1.5">
+                <Link2 size={12} />
+                Related Tasks
+              </h3>
+              <div class="rounded-lg border border-border bg-background p-3 space-y-2">
+                {#each relatedTasksDetails as relatedTask (relatedTask.id)}
+                  {@const relatedPriorityColor = getPriorityColor(relatedTask.priority || "medium")}
+                  <div class="flex items-center gap-3 rounded-lg p-2 hover:bg-muted/50 transition-all">
+                    <Link2 size={14} class="text-muted-foreground flex-shrink-0" />
+                    <div class="flex-1 min-w-0">
+                      <p class="text-sm font-medium text-foreground truncate">{relatedTask.title}</p>
+                      <div class="flex items-center gap-2 mt-0.5">
+                        <span class={`text-[10px] font-semibold uppercase ${relatedPriorityColor.text}`}>
+                          {relatedTask.priority || "medium"}
+                        </span>
+                        <span class="text-[10px] text-muted-foreground">•</span>
+                        <span class="text-[10px] text-muted-foreground">{relatedTask.status}</span>
+                      </div>
+                    </div>
+                  </div>
                 {/each}
               </div>
             </div>
