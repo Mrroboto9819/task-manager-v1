@@ -47,7 +47,9 @@
     "available": "v{version} available",
     "title": "Update Available",
     "message": "A new version (v{version}) is available. Would you like to download and install it now?",
+    "linuxMessage": "A new version (v{version}) is available. Auto-update is not supported on Linux. Click below to open the downloads page where you can get the latest .deb file.",
     "updateNow": "Update Now",
+    "openDownloads": "Open Downloads",
     "later": "Later"
   },
   "settings": {
@@ -343,7 +345,21 @@
     "workDistributionDesc": "How evenly tasks are distributed among team members",
     "balance": "Balance Score",
     "agingAlert": "Aging Tasks Detected",
-    "agingAlertDesc": "You have tasks that are {days} days old. Consider reviewing and prioritizing them."
+    "agingAlertDesc": "You have tasks that are {days} days old. Consider reviewing and prioritizing them.",
+    "spillover": "Spillover Report",
+    "spilloverDesc": "Tasks that didn't complete in their original sprint",
+    "spilloverTasks": "Spillover Tasks",
+    "movedToBacklog": "Moved to Backlog",
+    "movedToNewSprint": "Reassigned to New Sprint",
+    "originalSprint": "Original Sprint",
+    "currentLocation": "Current Location",
+    "movedOn": "Moved on",
+    "noSpillover": "No spillover tasks found",
+    "spilloverRate": "Spillover Rate",
+    "tasksSpilled": "tasks spilled over",
+    "fromSprint": "from",
+    "toBacklog": "to Backlog",
+    "toSprint": "to"
   },
   "backlog": {
     "title": "Product Backlog",

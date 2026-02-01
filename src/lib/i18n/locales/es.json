@@ -47,7 +47,9 @@
     "available": "v{version} disponible",
     "title": "Actualización Disponible",
     "message": "Una nueva versión (v{version}) está disponible. ¿Te gustaría descargarla e instalarla ahora?",
+    "linuxMessage": "Una nueva versión (v{version}) está disponible. La actualización automática no está soportada en Linux. Haz clic abajo para abrir la página de descargas donde puedes obtener el archivo .deb más reciente.",
     "updateNow": "Actualizar Ahora",
+    "openDownloads": "Abrir Descargas",
     "later": "Más Tarde"
   },
   "settings": {
@@ -343,7 +345,21 @@
     "workDistributionDesc": "Qué tan equitativamente están distribuidas las tareas entre los miembros",
     "balance": "Puntuación de Balance",
     "agingAlert": "Tareas Antiguas Detectadas",
-    "agingAlertDesc": "Tienes tareas con {days} días de antigüedad. Considera revisarlas y priorizarlas."
+    "agingAlertDesc": "Tienes tareas con {days} días de antigüedad. Considera revisarlas y priorizarlas.",
+    "spillover": "Reporte de Arrastre",
+    "spilloverDesc": "Tareas que no se completaron en su sprint original",
+    "spilloverTasks": "Tareas Arrastradas",
+    "movedToBacklog": "Movidas al Backlog",
+    "movedToNewSprint": "Reasignadas a Nuevo Sprint",
+    "originalSprint": "Sprint Original",
+    "currentLocation": "Ubicación Actual",
+    "movedOn": "Movida el",
+    "noSpillover": "No se encontraron tareas arrastradas",
+    "spilloverRate": "Tasa de Arrastre",
+    "tasksSpilled": "tareas arrastradas",
+    "fromSprint": "de",
+    "toBacklog": "al Backlog",
+    "toSprint": "a"
   },
   "backlog": {
     "title": "Backlog del Producto",

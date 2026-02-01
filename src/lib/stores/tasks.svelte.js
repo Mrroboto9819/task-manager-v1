@@ -23,6 +23,39 @@ function removeDuplicates(items) {
   });
 }
 
+// Fields to track in history
+const TRACKED_FIELDS = ["sprintId", "status", "priority", "asign", "points", "blocked"];
+
+/**
+ * Create a history entry for a field change
+ */
+function createHistoryEntry(field, fromValue, toValue, action = "update") {
+  return {
+    timestamp: new Date().toISOString(),
+    field,
+    from: fromValue ?? null,
+    to: toValue ?? null,
+    action,
+  };
+}
+
+/**
+ * Compare old and new task data, return history entries for changes
+ */
+function getChangedFields(oldTask, updates) {
+  const historyEntries = [];
+
+  for (const field of TRACKED_FIELDS) {
+    if (field in updates && updates[field] !== oldTask[field]) {
+      historyEntries.push(
+        createHistoryEntry(field, oldTask[field], updates[field])
+      );
+    }
+  }
+
+  return historyEntries;
+}
+
 function saveTasks() {
   tasks = removeDuplicates(tasks);
   if (typeof localStorage !== "undefined") {
@@ -58,10 +91,24 @@ export const taskStore = {
 
   create(taskData) {
     const now = new Date().toISOString();
+
+    // Create initial history entry
+    const initialHistory = [
+      createHistoryEntry("task", null, "created", "create"),
+    ];
+
+    // If task is created directly in a sprint, track that
+    if (taskData.sprintId) {
+      initialHistory.push(
+        createHistoryEntry("sprintId", null, taskData.sprintId, "create")
+      );
+    }
+
     const task = {
       id: newId(),
       created: now,
       updated: now,
+      history: initialHistory,
       ...taskData,
     };
 
@@ -79,8 +126,21 @@ export const taskStore = {
 
   update(id, updates) {
     const now = new Date().toISOString();
+    const oldTask = tasks.find((t) => t.id === id);
+
+    if (!oldTask) return;
+
+    // Get history entries for changed fields
+    const newHistoryEntries = getChangedFields(oldTask, updates);
+
+    // Merge with existing history
+    const existingHistory = Array.isArray(oldTask.history) ? oldTask.history : [];
+    const updatedHistory = [...existingHistory, ...newHistoryEntries];
+
     tasks = tasks.map((task) =>
-      task.id === id ? { ...task, ...updates, updated: now } : task
+      task.id === id
+        ? { ...task, ...updates, updated: now, history: updatedHistory }
+        : task
     );
     saveTasks();
 

@@ -16,6 +16,7 @@
   let darkMode = $state(true);
   let mounted = $state(false);
   let isMac = $state(false);
+  let isLinux = $state(false);
   let sidebarCollapsed = $state(false);
   let contentElement: HTMLElement | undefined = $state();
 
@@ -34,8 +35,10 @@
   onMount(async () => {
     mounted = true;
 
-    // Detect platform (macOS vs Windows/Linux)
-    isMac = navigator.platform.toLowerCase().includes('mac');
+    // Detect platform (macOS vs Windows vs Linux)
+    const platform = navigator.platform.toLowerCase();
+    isMac = platform.includes('mac');
+    isLinux = platform.includes('linux');
 
     // Initialize all stores
     hydrateAllStores();
@@ -119,7 +122,23 @@
   }
 
   async function handleUpdateConfirm() {
-    if (!pendingUpdate || !relaunchFn) return;
+    if (!pendingUpdate) return;
+
+    // For Linux, open GitHub releases page instead of auto-update
+    if (isLinux) {
+      updateModalOpen = false;
+      try {
+        const { openUrl } = await import("@tauri-apps/plugin-opener");
+        await openUrl("https://github.com/Mrroboto9819/FlowStack-desktop/releases/latest");
+      } catch {
+        // Fallback to window.open if opener plugin not available
+        window.open("https://github.com/Mrroboto9819/FlowStack-desktop/releases/latest", "_blank");
+      }
+      updateSkipped = true; // Keep the indicator visible for later
+      return;
+    }
+
+    if (!relaunchFn) return;
 
     // Close modal and show download screen
     updateModalOpen = false;
@@ -179,7 +198,8 @@
 
   function showUpdateModal() {
     // Re-show the update modal (when user clicks the skipped update indicator)
-    if (pendingUpdate && relaunchFn) {
+    // For Linux, we only need pendingUpdate (no relaunchFn needed since we just open URL)
+    if (pendingUpdate && (relaunchFn || isLinux)) {
       updateSkipped = false;
       updateModalOpen = true;
     }
@@ -359,8 +379,8 @@
   <ConfirmModal
     bind:open={updateModalOpen}
     title={$_("update.title")}
-    message={$_("update.message", { values: { version: updateVersion } })}
-    confirmText={$_("update.updateNow")}
+    message={isLinux ? $_("update.linuxMessage", { values: { version: updateVersion } }) : $_("update.message", { values: { version: updateVersion } })}
+    confirmText={isLinux ? $_("update.openDownloads") : $_("update.updateNow")}
     cancelText={$_("update.later")}
     variant="info"
     onConfirm={handleUpdateConfirm}

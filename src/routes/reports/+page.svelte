@@ -16,11 +16,14 @@
     Timer,
     GitCompare,
     BarChart2,
+    ArrowRightLeft,
+    Undo2,
   } from "lucide-svelte";
   import { onMount, onDestroy } from "svelte";
   import { Chart, registerables } from "chart.js";
   import { sprintStore, taskStore, userStore, settingsStore } from "../../lib/stores/index.js";
   import { _ } from "$lib/i18n";
+  import * as Select from "$lib/components/ui/select/index.svelte";
 
   // Get methodology from settings
   let methodology = $derived(settingsStore.settings.methodology || "agile");
@@ -120,6 +123,20 @@
     { value: "all", label: $_("common.all") },
     ...allUsers.map((u) => ({ value: u.name, label: u.name })),
   ]);
+
+  // Date range filter options
+  let dateRangeOptions = $derived([
+    { value: "all", label: $_("reports.allTime") },
+    { value: "week", label: $_("reports.lastWeek") },
+    { value: "month", label: $_("reports.lastMonth") },
+    { value: "quarter", label: $_("reports.lastQuarter") },
+    { value: "year", label: $_("reports.lastYear") },
+  ]);
+
+  // Helper to get selected label
+  function getSelectedLabel(options: { value: string; label: string }[], value: string): string {
+    return options.find((o) => o.value === value)?.label || value;
+  }
 
   // ============ OVERVIEW STATS ============
   let overviewStats = $derived(() => {
@@ -240,6 +257,85 @@
       sprintCommitment,
       distributionBalance,
       memberTasks,
+    };
+  }
+
+  // ============ SPILLOVER DATA ============
+  interface SpilloverTask {
+    id: string;
+    title: string;
+    originalSprintId: string | null;
+    originalSprintName: string;
+    currentSprintId: string | null;
+    currentSprintName: string;
+    movedToBacklog: boolean;
+    movedOn: string;
+    status: string;
+    points: number;
+  }
+
+  function getSpilloverData(): { tasks: SpilloverTask[]; movedToBacklog: number; movedToNewSprint: number; spilloverRate: number } {
+    const spilloverTasks: SpilloverTask[] = [];
+
+    allTasks.forEach((task) => {
+      if (!task.history || !Array.isArray(task.history)) return;
+
+      // Find sprint changes in history
+      const sprintChanges = task.history.filter(
+        (h: any) => h.field === "sprintId" && h.action === "update" && h.from !== null
+      );
+
+      // Only consider tasks that moved FROM a sprint (not initial assignment)
+      sprintChanges.forEach((change: any) => {
+        // Skip if task was completed in the original sprint (it's not spillover)
+        // We check if the task is NOT done when it was moved
+        const changeIndex = task.history.indexOf(change);
+        const statusAtMove = task.history
+          .slice(0, changeIndex + 1)
+          .reverse()
+          .find((h: any) => h.field === "status");
+
+        // If task was already DONE when moved, it's not spillover
+        if (statusAtMove && statusAtMove.to === "DONE") return;
+
+        const originalSprint = allSprints.find((s) => s.id === change.from);
+        const newSprint = change.to ? allSprints.find((s) => s.id === change.to) : null;
+
+        spilloverTasks.push({
+          id: task.id,
+          title: task.title || "Untitled Task",
+          originalSprintId: change.from,
+          originalSprintName: originalSprint?.name || "Unknown Sprint",
+          currentSprintId: change.to,
+          currentSprintName: newSprint?.name || "Backlog",
+          movedToBacklog: change.to === null,
+          movedOn: change.timestamp,
+          status: task.status || "BACKLOG",
+          points: task.points || 0,
+        });
+      });
+    });
+
+    // Sort by most recent first
+    spilloverTasks.sort((a, b) => new Date(b.movedOn).getTime() - new Date(a.movedOn).getTime());
+
+    // Calculate stats
+    const movedToBacklog = spilloverTasks.filter((t) => t.movedToBacklog).length;
+    const movedToNewSprint = spilloverTasks.filter((t) => !t.movedToBacklog).length;
+
+    // Calculate spillover rate: tasks spilled / total tasks in completed sprints
+    const completedSprintIds = completedSprints.map((s) => s.id);
+    const tasksInCompletedSprints = allTasks.filter((t) => completedSprintIds.includes(t.sprintId)).length;
+    const uniqueSpilledTaskIds = [...new Set(spilloverTasks.map((t) => t.id))];
+    const spilloverRate = tasksInCompletedSprints > 0
+      ? Math.round((uniqueSpilledTaskIds.length / tasksInCompletedSprints) * 100)
+      : 0;
+
+    return {
+      tasks: spilloverTasks,
+      movedToBacklog,
+      movedToNewSprint,
+      spilloverRate,
     };
   }
 
@@ -756,38 +852,48 @@
     </div>
 
     <!-- Date Range Filter -->
-    <select
-      bind:value={filterDateRange}
-      class="px-3 py-1.5 text-sm rounded-lg bg-muted border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-    >
-      <option value="all">{$_("reports.allTime")}</option>
-      <option value="week">{$_("reports.lastWeek")}</option>
-      <option value="month">{$_("reports.lastMonth")}</option>
-      <option value="quarter">{$_("reports.lastQuarter")}</option>
-      <option value="year">{$_("reports.lastYear")}</option>
-    </select>
+    <div class="relative min-w-[140px]">
+      <Select.Root onValueChange={(v) => (filterDateRange = v)}>
+        <Select.Trigger class="h-9 text-sm bg-muted">
+          {getSelectedLabel(dateRangeOptions, filterDateRange)}
+        </Select.Trigger>
+        <Select.Content>
+          {#each dateRangeOptions as option}
+            <Select.Item value={option.value}>{option.label}</Select.Item>
+          {/each}
+        </Select.Content>
+      </Select.Root>
+    </div>
 
     <!-- Sprint Filter (Agile only) -->
     {#if methodology === "agile"}
-      <select
-        bind:value={filterSprint}
-        class="px-3 py-1.5 text-sm rounded-lg bg-muted border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-      >
-        {#each sprintFilterOptions as option}
-          <option value={option.value}>{option.label}</option>
-        {/each}
-      </select>
+      <div class="relative min-w-[140px]">
+        <Select.Root onValueChange={(v) => (filterSprint = v)}>
+          <Select.Trigger class="h-9 text-sm bg-muted">
+            {getSelectedLabel(sprintFilterOptions, filterSprint)}
+          </Select.Trigger>
+          <Select.Content>
+            {#each sprintFilterOptions as option}
+              <Select.Item value={option.value}>{option.label}</Select.Item>
+            {/each}
+          </Select.Content>
+        </Select.Root>
+      </div>
     {/if}
 
     <!-- Member Filter -->
-    <select
-      bind:value={filterMember}
-      class="px-3 py-1.5 text-sm rounded-lg bg-muted border border-border text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50"
-    >
-      {#each memberFilterOptions as option}
-        <option value={option.value}>{option.label}</option>
-      {/each}
-    </select>
+    <div class="relative min-w-[140px]">
+      <Select.Root onValueChange={(v) => (filterMember = v)}>
+        <Select.Trigger class="h-9 text-sm bg-muted">
+          {getSelectedLabel(memberFilterOptions, filterMember)}
+        </Select.Trigger>
+        <Select.Content>
+          {#each memberFilterOptions as option}
+            <Select.Item value={option.value}>{option.label}</Select.Item>
+          {/each}
+        </Select.Content>
+      </Select.Root>
+    </div>
 
     <!-- Clear Filters -->
     {#if filterDateRange !== "all" || filterSprint !== "all" || filterMember !== "all"}
@@ -894,6 +1000,80 @@
           {/if}
         </section>
       </div>
+
+      <!-- Spillover Report -->
+      {@const spilloverData = getSpilloverData()}
+      <section class="rounded-2xl border border-border bg-card p-6 shadow-sm">
+        <div class="flex items-center gap-3 mb-4">
+          <ArrowRightLeft size={20} class="text-amber-500" />
+          <div>
+            <h2 class="text-lg font-semibold text-foreground">{$_("reports.spillover")}</h2>
+            <p class="text-sm text-muted-foreground">{$_("reports.spilloverDesc")}</p>
+          </div>
+        </div>
+
+        <!-- Spillover Stats -->
+        <div class="grid grid-cols-3 gap-4 mb-6">
+          <div class="p-4 rounded-lg bg-muted/30 text-center">
+            <p class="text-3xl font-bold text-amber-500">{spilloverData.tasks.length}</p>
+            <p class="text-xs text-muted-foreground mt-1">{$_("reports.spilloverTasks")}</p>
+          </div>
+          <div class="p-4 rounded-lg bg-muted/30 text-center">
+            <p class="text-3xl font-bold text-rose-500">{spilloverData.movedToBacklog}</p>
+            <p class="text-xs text-muted-foreground mt-1">{$_("reports.movedToBacklog")}</p>
+          </div>
+          <div class="p-4 rounded-lg bg-muted/30 text-center">
+            <p class="text-3xl font-bold text-blue-500">{spilloverData.movedToNewSprint}</p>
+            <p class="text-xs text-muted-foreground mt-1">{$_("reports.movedToNewSprint")}</p>
+          </div>
+        </div>
+
+        <!-- Spillover Tasks List -->
+        {#if spilloverData.tasks.length === 0}
+          <div class="flex items-center justify-center py-8 text-muted-foreground">
+            <CheckCircle size={18} class="mr-2 text-emerald-500" />
+            <p>{$_("reports.noSpillover")}</p>
+          </div>
+        {:else}
+          <div class="space-y-3 max-h-80 overflow-y-auto">
+            {#each spilloverData.tasks.slice(0, 10) as task}
+              <div class="flex items-center gap-3 p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                <div class="flex-shrink-0">
+                  {#if task.movedToBacklog}
+                    <Undo2 size={16} class="text-rose-500" />
+                  {:else}
+                    <ArrowRightLeft size={16} class="text-blue-500" />
+                  {/if}
+                </div>
+                <div class="flex-1 min-w-0">
+                  <p class="font-medium text-foreground truncate">{task.title}</p>
+                  <p class="text-xs text-muted-foreground">
+                    {$_("reports.fromSprint")} <span class="text-primary">{task.originalSprintName}</span>
+                    {#if task.movedToBacklog}
+                      {$_("reports.toBacklog")}
+                    {:else}
+                      {$_("reports.toSprint")} <span class="text-primary">{task.currentSprintName}</span>
+                    {/if}
+                  </p>
+                </div>
+                <div class="flex-shrink-0 text-right">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium {task.status === 'DONE' ? 'bg-emerald-500/10 text-emerald-500' : 'bg-muted text-muted-foreground'}">
+                    {task.status}
+                  </span>
+                  {#if task.points > 0}
+                    <p class="text-xs text-muted-foreground mt-1">{task.points} {$_("reports.points")}</p>
+                  {/if}
+                </div>
+              </div>
+            {/each}
+            {#if spilloverData.tasks.length > 10}
+              <p class="text-center text-sm text-muted-foreground py-2">
+                +{spilloverData.tasks.length - 10} more...
+              </p>
+            {/if}
+          </div>
+        {/if}
+      </section>
     {/if}
 
     <!-- ============ MONTHLY TAB ============ -->
