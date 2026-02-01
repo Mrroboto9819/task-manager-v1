@@ -22,7 +22,8 @@
     "sprints": "Sprints",
     "team": "Team",
     "reports": "Reports",
-    "boardSettings": "Board Settings"
+    "boardSettings": "Board Settings",
+    "about": "About"
   },
   "sidebar": {
     "expandSidebar": "Expand sidebar",
@@ -492,5 +493,19 @@
   "emptyState": {
     "title": "Nothing here yet",
     "message": "Get started by creating your first item"
+  },
+  "about": {
+    "title": "About",
+    "description": "Learn more about FlowStack and its creator",
+    "appDescription": "FlowStack is a powerful task management application designed to help teams and individuals organize their work efficiently using agile methodologies, Kanban boards, or traditional project management approaches.",
+    "developer": "Developer",
+    "role": "Full Stack Developer",
+    "support": "Support the Project",
+    "supportDescription": "If you find FlowStack useful, consider supporting its development. Your contribution helps keep the project alive and enables new features!",
+    "scanQR": "Scan the QR code or click the button to support:",
+    "buyMeCoffee": "Buy Me a Coffee",
+    "builtWith": "Built With",
+    "madeWith": "Made with",
+    "madeWithEnd": "in Mexico"
   }
 }

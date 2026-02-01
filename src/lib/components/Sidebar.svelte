@@ -15,6 +15,7 @@
     LogIn,
     SlidersHorizontal,
     BarChart3,
+    Info,
   } from "lucide-svelte";
   import { page } from "$app/stores";
   import { goto } from "$app/navigation";
@@ -33,6 +34,7 @@
     { href: "/team", labelKey: "nav.team", icon: Users, methodologies: ["agile", "kanban", "waterfall"] },
     { href: "/reports", labelKey: "nav.reports", icon: BarChart3, methodologies: ["agile", "kanban", "waterfall"] },
     { href: "/settings", labelKey: "nav.boardSettings", icon: Settings, methodologies: ["agile", "kanban", "waterfall"] },
+    { href: "/about", labelKey: "nav.about", icon: Info, methodologies: ["agile", "kanban", "waterfall"] },
   ];
 
   // Filter nav items based on current methodology
